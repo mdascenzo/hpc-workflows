@@ -1,0 +1,54 @@
+---
+title: "create_txi_file.R"
+output: html_document
+---
+
+```{r}
+source('rnaseq_tools.R')
+```
+
+
+```{r}
+
+salmon.quant.analysis.dir = '/Users/mdascenzo/workspace/dev_analysis/rnaseq_pipeline/salmon/'
+sample.ids = unlist(strsplit("WB-1044190 WB-1044191 WB-1044192", " "))
+tx2gene.fp = '/Users/mdascenzo/workspace/dev/pipelines/src/rnaseq/R/tx2gene.EnsDb.Hsapiens.v86.csv'
+
+txi = tximport.salmon(salmon.quant.analysis.dir, sample.ids, tx2gene.fp)
+
+```
+
+
+```{r}
+
+head(txi$counts)
+
+```
+
+```{r}
+txi$names
+```
+
+
+
+```{r}
+
+write.table(txi$counts, file='txi.txt', sep='\t', quote=FALSE)
+
+```
+
+
+```{r}
+k = read.table(file='txi.txt')
+k[c('ENSG00000000003', 'ENSG00000000005', 'ENSG00000000419'),]
+
+```
+
+
+```{r}
+class(txi)
+
+write.list()
+```
+
+
