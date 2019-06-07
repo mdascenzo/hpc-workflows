@@ -1,0 +1,24 @@
+
+# ensemble transcripts
+transcripts_fa: '/Users/mdascenzo/workspace/data/Homo_sapiens.GRCh38.rel83.cdna.all.fa'
+
+# tx2gene file
+tx2gene_fp: '/Users/mdascenzo/workspace/dev/pipelines/src/rnaseq/R/tx2gene.EnsDb.Hsapiens.v86.csv'
+
+raw_data: "/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA"
+
+out: '/Users/mdascenzo/workspace/dev_analysis/rnaseq_pipeline/'
+
+deseq2_design:
+  - '~ class  + covanceBatchID'
+
+samples:
+  WB-1044190:
+    read1: '/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA/Sample_WB-1044190/BHJ3VCBBXX_WB-1044190_ATTACTCG-TATAGCCT_L006_R1_001_1M.fastq.gz'
+    read2: '/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA/Sample_WB-1044190/BHJ3VCBBXX_WB-1044190_ATTACTCG-TATAGCCT_L006_R2_001_1M.fastq.gz'
+  WB-1044191:
+    read1: '/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA/Sample_WB-1044191/BHJ3VCBBXX_WB-1044191_ATTACTCG-TATAGCCT_L006_R1_001_1M.fastq.gz'
+    read2: '/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA/Sample_WB-1044191/BHJ3VCBBXX_WB-1044191_ATTACTCG-TATAGCCT_L006_R2_001_1M.fastq.gz'
+  WB-1044192:
+    read1: '/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA/Sample_WB-1044192/BHJ3VCBBXX_WB-1044192_ATTACTCG-TATAGCCT_L006_R1_001_1M.fastq.gz'
+    read2: '/Users/mdascenzo/workspace/data/AD/AD.031816/RAW_DATA/Sample_WB-1044192/BHJ3VCBBXX_WB-1044192_ATTACTCG-TATAGCCT_L006_R2_001_1M.fastq.gz'

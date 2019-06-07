@@ -1,0 +1,146 @@
+import os
+
+from os import path
+# todo: add validation step
+from snakemake.io import protected, expand
+from snakemake.io import directory
+from snakemake import shell, rules
+from snakemake.utils import R
+
+# r2py reports all stdout using warnings
+# ignore warnings to maintain cleaner stdout
+import warnings
+from rpy2.rinterface import RRuntimeWarning
+warnings.filterwarnings("ignore", category=RRuntimeWarning)
+
+# set default configuration file
+configfile: 'config.yml'
+
+SAMPLES = config['samples']
+SAMPLE_IDS = list(SAMPLES.keys())
+
+# location of salmon index directory
+salmon_index_location =\
+	os.path.join(
+		os.path.dirname(config['transcripts_fa']),
+		'salmon',
+		os.path.splitext(os.path.basename(config['transcripts_fa']))[0]
+	)
+
+# set default options
+opts = dict()
+opts['salmon-quant-l'] = 'ISR'
+# override default options with config based options
+if 'options' in config:
+	opts.update(config['options'])
+
+
+def set_log(name):
+	return os.path.join(config['out'], name)
+
+rule all:
+	input:
+		expand(path.join(config['out'], 'salmon/{sample}/quant.sf'), sample=SAMPLE_IDS),
+		expand(path.join(config['out'], 'fastqc/{sample}'), sample=SAMPLES),
+		path.join(config['out'], "multiqc_report.html"),
+		path.join(config['out'],'salmon/tx2gene.txt')
+	output:
+		path.join(config['out'], 'dag.pdf')
+	shell: "snakemake --rulegraph | dot -Tpdf > {output}"
+
+
+rule salmon_index:
+	input:
+		config['transcripts_fa']
+	# index transcript fasta file if the directory does not already exist
+	output:
+		protected(
+			directory(
+				salmon_index_location
+			)
+		)
+	log: 'salmon/salmon_index.log'
+	shell:
+		"""
+		salmon index -t {input} -i {output} &> {log}
+		"""
+
+# salmon libtype https://salmon.readthedocs.io/en/latest/salmon.html#what-s-this-libtype
+# pub: https://www.biorxiv.org/content/biorxiv/early/2016/08/30/021592.full.pdf
+rule salmon_quant:
+	input:
+		index = salmon_index_location,
+		read1 = lambda w: config['samples'][w.sample]['read1'],
+		read2 = lambda w: config['samples'][w.sample]['read2']
+	output:
+		quant = path.join(config['out'], 'salmon/{sample}/quant.sf'),
+	params:
+		l = opts['salmon-quant-l']
+	log: set_log('salmon/{sample}/stdout.log')
+
+	run:
+		output_dir = os.path.dirname(output[0])
+		shell("salmon quant -i {input.index} -l {params.l} -1 <(gunzip -c {input.read1}) -2 <(gunzip -c {input.read2}) --validateMappings -o {output_dir} &> {log}")
+
+
+# https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
+rule aggrigate_tx:
+	input:
+		tx2gene_fp = config['tx2gene_fp'],
+		quant_files = expand(path.join(config['out'], 'salmon/{sample}/quant.sf'), sample=SAMPLES)
+	output:
+		path.join(config['out'], 'salmon/tx2gene.txt')
+
+	params:
+		salmon_quant_analysis_dir = path.join(config['out'], 'salmon'),
+		sample_ids = SAMPLE_IDS
+
+	run:
+		R("""
+		source('./R/rnaseq_tools.R')
+				
+		# create R variables
+		salmon.quant.analysis.dir <- "{params.salmon_quant_analysis_dir}" 
+		sample.ids <- unlist(strsplit("{params.sample_ids}", " "))
+		tx2gene.fp = "{input.tx2gene_fp}"
+		output = "{output}"
+		
+		# call rnaseq_tools::tximport.salmon()
+		txi.salmon = tximport.salmon(salmon.quant.analysis.dir, sample.ids, tx2gene.fp)
+		
+		# save tx data to file
+		write.txi(txi.salmon, file=output)
+		
+		""")
+
+# QC
+
+rule fastqc:
+	input:
+		read1 = lambda w: config['samples'][w.sample]['read1'],
+		read2 = lambda w: config['samples'][w.sample]['read2']
+	output:
+		dir = directory(path.join(config['out'], 'fastqc/{sample}')),
+		link_r1 = path.join(config['out'], 'fastqc/input', '{sample}_R1.fastq.gz'),
+		link_r2 = path.join(config['out'], 'fastqc/input', '{sample}_R2.fastq.gz')
+	log: set_log('fastqc/{sample}/{sample}_fastqc.log')
+	shell:
+		"""
+		ln -s {input.read1} {output.link_r1}
+		ln -s {input.read2} {output.link_r2}
+		fastqc --noextract {output.link_r1} {output.link_r2} -o {output.dir} &> {log}
+		"""
+
+# see also https://multiqc.info/docs/#bulk-sample-renaming
+rule multiqc:
+	input:
+		expand(path.join(config['out'], 'fastqc/{sample}'), sample=SAMPLES),
+		expand(path.join(config['out'], 'salmon/{sample}/quant.sf'), sample=SAMPLES)
+	output:
+		path.join(config['out'], "multiqc_report.html")
+	params:
+		'-m fastqc -m salmon'
+	wrapper:
+		"0.35.0/bio/multiqc"
+
+
