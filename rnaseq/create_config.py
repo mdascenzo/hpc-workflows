@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import re
-import io
 import os
 import natsort
-import glob
 import collections
 from ruamel import yaml  # conda install -c conda-forge -n rnaseq ruamel.yaml
 import argparse
