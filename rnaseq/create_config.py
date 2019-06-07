@@ -1,27 +1,20 @@
 #!/usr/bin/env python
-
-# conda install -c conda-forge -n rnaseq ruamel.yaml
-
 import re
 import io
 import os
 import natsort
+import glob
 import collections
-from ruamel import yaml
+from ruamel import yaml  # conda install -c conda-forge -n rnaseq ruamel.yaml
 import argparse
-
-if not os.path.exists('config.yml'):
-    f = io.file('config.yml', 'w')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', dest='fas', help='path to fastq files', metavar='fq', type=str,  nargs='+')
 parser.add_argument('-o', dest='out', default='.')
-
 args = parser.parse_args()
 
 if not os.path.exists('config.yml'):
     f = open('config.yml', 'w')
-
 
 config = collections.OrderedDict()
 
