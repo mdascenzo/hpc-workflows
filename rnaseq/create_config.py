@@ -9,29 +9,31 @@ import natsort
 import glob
 import collections
 from ruamel import yaml
-from optparse import OptionParser
-
-parser = OptionParser()
-parser.add_option('-f', '--fas', dest='fas', help='path to fastq files', metavar='fq', type=str)
-parser.add_option('-o', dest='out', default='.')
-
-(options, args) = parser.parse_args()
+import argparse
 
 if not os.path.exists('config.yml'):
     f = io.file('config.yml', 'w')
 
-fas = [f for f in glob.glob(options.fas, recursive=False)]
+parser = argparse.ArgumentParser()
+parser.add_argument('-f', dest='fas', help='path to fastq files', metavar='fq', type=str,  nargs='+')
+parser.add_argument('-o', dest='out', default='.')
+
+args = parser.parse_args()
+
+if not os.path.exists('config.yml'):
+    f = open('config.yml', 'w')
+
 
 config = collections.OrderedDict()
 
 config['transcripts_fa'] = '/Users/mdascenzo/workspace/data/Homo_sapiens.GRCh38.rel83.cdna.all.fa'
-config['tx2gene_fp'] = '/Users/mdascenzo/workspace/dev/pipelines/src/rnaseq/R/tx2gene.EnsDb.Hsapiens.v86.csv'
+config['tx2gene_fp'] = '/Users/mdascenzo/workspace/dev/workflows/src/rnaseq/R/tx2gene.EnsDb.Hsapiens.v86.csv'
 config['out'] = '/Users/mdascenzo/workspace/dev/rnaseq-sim/analysis'
 
 config['samples'] = collections.OrderedDict()
 
 # currently assumes paired end reads
-it = iter(natsort.natsorted(fas))
+it = iter(natsort.natsorted(arg.fas))
 for x in it:
     paired_reads = (x, next(it))
     sample_id = re.sub('_1$', '', os.path.splitext(os.path.splitext(os.path.basename(paired_reads[0]))[0])[0])
@@ -42,5 +44,5 @@ for x in it:
 
 config_file = yaml.dump(config, Dumper=yaml.RoundTripDumper, default_flow_style=False).replace('!!omap', '').replace('- ', '')
 
-fout = open(os.path.join(options.out, 'config.yml'), 'w')
+fout = open(os.path.join(args.out, 'config.yml'), 'w')
 fout.write(config_file)
