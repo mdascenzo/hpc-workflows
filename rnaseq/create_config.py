@@ -6,7 +6,6 @@ import re
 import io
 import os
 import natsort
-import glob
 import collections
 from ruamel import yaml
 import argparse
