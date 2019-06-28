@@ -48,6 +48,9 @@ rule all:
 		# aggrigate_tx
 		path.join(config['out'], 'salmon', config['analysis_name'] + '_counts.txt'),
 		path.join(config['out'], 'salmon', config['analysis_name'] + '_txi.rds'),
+		# star
+		expand(path.join(config['out'], 'star/{sample}'), sample=SAMPLES)
+
 	#output:
 	#	path.join(config['out'], 'dag.pdf')
 	#shell: "snakemake -s rnaseq.smk --rulegraph | dot -Tpdf > {output}"
@@ -120,6 +123,45 @@ rule aggrigate_tx:
 		write.txi(txi_salmon, basename=basename, path=path)
 		
 		""")
+
+
+
+## example config parameter values
+# genome_dir: /Precyte1/tmp/refs/genomes
+# genome_id:  hg38wERCC92
+rule star_index:
+	input:
+		path.join(config['genome_dir'], 'fa', config['genome_id'])
+	output:
+		protected(
+			directory(
+				os.path.join(config['genome_dir'], 'indexes', config['genome_id'], 'star/')
+			)
+		)
+
+	shell:
+		"""
+		star --runMode genomeGenerate --runThreadN 1 --genomeFastaFiles {input}/*.fa --genomeDir {output} --outFileNamePrefix {output} 
+		"""
+	# todo: add --sjdbGTFfile /path/to/gtf (e.g gencode.v25.primary_assembly.annotation.wERCC92.gtf) --sjdbOverhang 74
+
+
+
+rule star_align:
+	input:
+		read1 = lambda w: config['samples'][w.sample]['read1'],
+		read2 = lambda w: config['samples'][w.sample]['read2'],
+		star_genome_dir = os.path.join(config['genome_dir'], 'indexes', config['genome_id'], 'star/')
+	output:
+		path.join(config['out'], 'star/{sample}')
+
+	shell:
+		# option: --genomeLoad LoadAndKeep : osx incompatible
+		"""
+		star --runThreadN 1 --genomeDir {input.star_genome_dir} --readFilesCommand gzcat --readFilesIn {input.read1} {input.read2} --outFileNamePrefix {output}
+		"""
+
+
 
 
 # QC
