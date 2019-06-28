@@ -14,7 +14,7 @@ from rpy2.rinterface import RRuntimeWarning
 warnings.filterwarnings("ignore", category=RRuntimeWarning)
 
 # set default configuration file
-configfile: 'config.yml'
+#configfile: 'config.yml'
 
 SAMPLES = config['samples']
 SAMPLE_IDS = list(SAMPLES.keys())
@@ -26,6 +26,8 @@ salmon_index_location =\
 		'salmon',
 		os.path.splitext(os.path.basename(config['transcripts_fa']))[0]
 	)
+
+# todo: validate config input to ensure all files exist, generalize
 
 # set default options
 opts = dict()
@@ -43,10 +45,12 @@ rule all:
 		expand(path.join(config['out'], 'salmon/{sample}/quant.sf'), sample=SAMPLE_IDS),
 		expand(path.join(config['out'], 'fastqc/{sample}'), sample=SAMPLES),
 		path.join(config['out'], "multiqc_report.html"),
-		path.join(config['out'],'salmon/tx2gene.txt')
-	output:
-		path.join(config['out'], 'dag.pdf')
-	shell: "snakemake --rulegraph | dot -Tpdf > {output}"
+		# aggrigate_tx
+		path.join(config['out'], 'salmon', config['analysis_name'] + '_counts.txt'),
+		path.join(config['out'], 'salmon', config['analysis_name'] + '_txi.rds'),
+	#output:
+	#	path.join(config['out'], 'dag.pdf')
+	#shell: "snakemake -s rnaseq.smk --rulegraph | dot -Tpdf > {output}"
 
 
 rule salmon_index:
@@ -73,14 +77,14 @@ rule salmon_quant:
 		read1 = lambda w: config['samples'][w.sample]['read1'],
 		read2 = lambda w: config['samples'][w.sample]['read2']
 	output:
-		quant = path.join(config['out'], 'salmon/{sample}/quant.sf'),
+		quant = path.join(config['out'], 'salmon/{sample}/quant.sf')
 	params:
 		l = opts['salmon-quant-l']
 	log: set_log('salmon/{sample}/stdout.log')
 
 	run:
 		output_dir = os.path.dirname(output[0])
-		shell("salmon quant -i {input.index} -l {params.l} -1 <(gunzip -c {input.read1}) -2 <(gunzip -c {input.read2}) --validateMappings -o {output_dir} &> {log}")
+		shell("salmon quant -i {input.index} -l {params.l} -1 {input.read1} -2 {input.read2} --validateMappings -o {output_dir} &> {log}")
 
 
 # https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
@@ -89,32 +93,36 @@ rule aggrigate_tx:
 		tx2gene_fp = config['tx2gene_fp'],
 		quant_files = expand(path.join(config['out'], 'salmon/{sample}/quant.sf'), sample=SAMPLES)
 	output:
-		path.join(config['out'], 'salmon/tx2gene.txt')
-
+		counts = path.join(config['out'], 'salmon', config['analysis_name'] + '_counts.txt'),
+		txi = path.join(config['out'], 'salmon', config['analysis_name'] + '_txi.rds')
 	params:
+		basename = config['analysis_name'],
+		path = path.join(config['out'], 'salmon'),
 		salmon_quant_analysis_dir = path.join(config['out'], 'salmon'),
 		sample_ids = SAMPLE_IDS
 
 	run:
+		# noinspection RUnresolvedReference
 		R("""
 		source('./R/rnaseq_tools.R')
 				
 		# create R variables
-		salmon.quant.analysis.dir <- "{params.salmon_quant_analysis_dir}" 
-		sample.ids <- unlist(strsplit("{params.sample_ids}", " "))
-		tx2gene.fp = "{input.tx2gene_fp}"
-		output = "{output}"
+		salmon_quant_analysis_dir <- "{params.salmon_quant_analysis_dir}" 
+		sample_ids <- unlist(strsplit("{params.sample_ids}", " "))
+		tx2gene_fp = "{input.tx2gene_fp}"
+		basename = "{params.basename}"
+		path = "{params.path}"
 		
 		# call rnaseq_tools::tximport.salmon()
-		txi.salmon = tximport.salmon(salmon.quant.analysis.dir, sample.ids, tx2gene.fp)
+		txi_salmon = tximport.salmon(salmon_quant_analysis_dir, sample_ids, tx2gene_fp)
 		
 		# save tx data to file
-		write.txi(txi.salmon, file=output)
+		write.txi(txi_salmon, basename=basename, path=path)
 		
 		""")
 
-# QC
 
+# QC
 rule fastqc:
 	input:
 		read1 = lambda w: config['samples'][w.sample]['read1'],
@@ -139,8 +147,6 @@ rule multiqc:
 	output:
 		path.join(config['out'], "multiqc_report.html")
 	params:
-		'-m fastqc -m salmon'
+		'-m fastqc -m salmon --config ' + path.join(config['out'], 'multiqc_config.yaml')
 	wrapper:
 		"0.35.0/bio/multiqc"
-
-
