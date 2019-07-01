@@ -168,11 +168,18 @@ rule star_align:
 		bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
 		sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam')
 	params:
-		quant_mode = 'TranscriptomeSAM GeneCounts'
+		quant_mode = 'TranscriptomeSAM GeneCounts',
+		out_sam_type = 'BAM Unsorted SortedByCoordinate'
 	threads: available_cpu_count()-2
 	# parameters:
-	#	outSAMtype: BAM Unsorted SortedByCoordinate
-	#		- output both an unsorted and sorted bam file
+	#	quantMode: 'TranscriptomeSAM GeneCounts'
+	#		- output: 	1) alignments translated into transcript coordinates
+	#					2) number of reads/gene
+	#		- ref: STAR Manual (v2.6.1+) - "Counting number of reads per gene."
+	#	outSAMtype: 'BAM Unsorted SortedByCoordinate'
+	#		- output: 	1) unsorted bam file
+	#					2) sorted bam file
+	#		- notes:	"Unsorted" output can be directly input into featureCounts
 	shell:
 		# option: --genomeLoad LoadAndKeep : osx incompatible
 		"""
@@ -181,8 +188,8 @@ rule star_align:
 		     --readFilesCommand gzcat \
 		     --readFilesIn {input.read1} {input.read2} \
 		     --outFileNamePrefix  $(dirname {output.sorted_bam})/ \
-		     --outSAMtype BAM Unsorted SortedByCoordinate \
-		     --quantMode {params.quant_mode}
+		     --quantMode {params.quant_mode} \
+		     --outSAMtype {params.out_sam_type}
 		"""
 
 
