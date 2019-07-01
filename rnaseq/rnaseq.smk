@@ -6,12 +6,15 @@ from snakemake.io import protected, expand
 from snakemake.io import directory
 from snakemake import shell, rules
 from snakemake.utils import R
+from snakemake.utils import update_config, available_cpu_count
 
 # r2py reports all stdout using warnings
 # ignore warnings to maintain cleaner stdout
 import warnings
 from rpy2.rinterface import RRuntimeWarning
 warnings.filterwarnings("ignore", category=RRuntimeWarning)
+
+
 
 # set default configuration file
 #configfile: 'config.yml'
@@ -49,7 +52,8 @@ rule all:
 		path.join(config['out'], 'salmon', config['analysis_name'] + '_counts.txt'),
 		path.join(config['out'], 'salmon', config['analysis_name'] + '_txi.rds'),
 		# star
-		expand(path.join(config['out'], 'star/{sample}'), sample=SAMPLES)
+		#expand(path.join(config['out'], 'star/{sample}'), sample=SAMPLES),
+		expand(path.join(config['out'], 'star/{sample}/feature_counts.txt'), sample=SAMPLES)
 
 	#output:
 	#	path.join(config['out'], 'dag.pdf')
@@ -124,45 +128,62 @@ rule aggrigate_tx:
 		
 		""")
 
-
-
 ## example config parameter values
 # genome_dir: /Precyte1/tmp/refs/genomes
+# genome_build: hg38
 # genome_id:  hg38wERCC92
+# genome_annotation_file: gencode.v25.primary_assembly.annotation.wERCC92.gtf
+# todo: add splice junction awareness
+# 		e.g. --sjdbGTFfile /path/to/gtf (e.g gencode.v25.primary_assembly.annotation.wERCC92.gtf) --sjdbOverhang 74
 rule star_index:
 	input:
-		path.join(config['genome_dir'], 'fa', config['genome_id'])
+		fasta_files = path.join(config['genome_dir'], config['genome_build'], 'fa', config['genome_id']),
+		annotation_gtf = config['genome_annotation_file']
 	output:
-		protected(
+		path = protected(
 			directory(
-				os.path.join(config['genome_dir'], 'indexes', config['genome_id'], 'star/')
+				os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
 			)
 		)
+	run:
+		# check/create if output directory exists
+		#if not os.path.exists(output.output_dir):
+		#	os.makedirs(output.output_dir)
+		command =\
+		"star --runMode genomeGenerate --runThreadN 1 --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
+		# add optional parameters
+		if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
+			command += ' --sjdbGTFfile ' + input.annotation_gtf
+			command += ' --sjdbOverhang ' + str(config['star_sj_db_overhang'])
 
-	shell:
-		"""
-		star --runMode genomeGenerate --runThreadN 1 --genomeFastaFiles {input}/*.fa --genomeDir {output} --outFileNamePrefix {output} 
-		"""
-	# todo: add --sjdbGTFfile /path/to/gtf (e.g gencode.v25.primary_assembly.annotation.wERCC92.gtf) --sjdbOverhang 74
-
+		shell(command)
 
 
 rule star_align:
 	input:
 		read1 = lambda w: config['samples'][w.sample]['read1'],
 		read2 = lambda w: config['samples'][w.sample]['read2'],
-		star_genome_dir = os.path.join(config['genome_dir'], 'indexes', config['genome_id'], 'star/')
+		star_genome_dir = os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
 	output:
-		path.join(config['out'], 'star/{sample}')
-
+		path.join(config['out'], 'star/{sample}/Aligned.sortedByCoordinate.out.bam')
+	threads: available_cpu_count()-2
 	shell:
 		# option: --genomeLoad LoadAndKeep : osx incompatible
 		"""
-		star --runThreadN 1 --genomeDir {input.star_genome_dir} --readFilesCommand gzcat --readFilesIn {input.read1} {input.read2} --outFileNamePrefix {output}
+		star --runThreadN {threads} --genomeDir {input.star_genome_dir} --readFilesCommand gzcat --readFilesIn {input.read1} {input.read2} --outFileNamePrefix {output}
 		"""
 
 
-
+rule feature_counts:
+	input:
+		bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoordinate.out.bam'),
+		annotation_gtf = config['genome_annotation_file']
+	output:
+		path.join(config['out'], 'star/{sample}/feature_counts.txt')
+	shell:
+		"""
+		featureCounts -s 2 -a {input.annotation_gtf} -o {output}
+		"""
 
 # QC
 rule fastqc:
