@@ -165,24 +165,44 @@ rule star_align:
 		read2 = lambda w: config['samples'][w.sample]['read2'],
 		star_genome_dir = os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
 	output:
-		path.join(config['out'], 'star/{sample}/Aligned.sortedByCoordinate.out.bam')
+		bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
+		sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam')
+	params:
+		quant_mode = 'TranscriptomeSAM GeneCounts'
 	threads: available_cpu_count()-2
+	# parameters:
+	#	outSAMtype: BAM Unsorted SortedByCoordinate
+	#		- output both an unsorted and sorted bam file
 	shell:
 		# option: --genomeLoad LoadAndKeep : osx incompatible
 		"""
-		star --runThreadN {threads} --genomeDir {input.star_genome_dir} --readFilesCommand gzcat --readFilesIn {input.read1} {input.read2} --outFileNamePrefix {output}
+		star --runThreadN {threads} \
+		     --genomeDir {input.star_genome_dir} \
+		     --readFilesCommand gzcat \
+		     --readFilesIn {input.read1} {input.read2} \
+		     --outFileNamePrefix  $(dirname {output.sorted_bam})/ \
+		     --outSAMtype BAM Unsorted SortedByCoordinate \
+		     --quantMode {params.quant_mode}
 		"""
 
 
 rule feature_counts:
 	input:
-		bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoordinate.out.bam'),
+		#bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
+		bam = rules.star_align.output.bam,
 		annotation_gtf = config['genome_annotation_file']
 	output:
 		path.join(config['out'], 'star/{sample}/feature_counts.txt')
+	params:
+		strandedness = 2
+	threads: available_cpu_count()-2
+	# parameters:
+	#	-p include if read are paired-end
+	#	-B only count read-pairs that have both ends aligned
+	#	-s 0|1|2 : unstranded|stranded|reversely stranded
 	shell:
 		"""
-		featureCounts -s 2 -a {input.annotation_gtf} -o {output}
+		featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output} {input.bam}
 		"""
 
 # QC
