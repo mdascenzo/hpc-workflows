@@ -17,10 +17,27 @@ args = parser.parse_args()
 # todo: verify input or exit
 
 config = collections.OrderedDict()
-
 config['analysis_name'] = 'rnaseq_analysis'
-config['transcripts_fa'] = '/Users/mdascenzo/workspace/data/Homo_sapiens.GRCh38.rel83.cdna.all.fa'
+
+# analysis options
+config['star'] = "No"
+config['salmon'] = 'Yes'
+
+# reference free alignment options
+config['transcripts_fa'] = \
+    '/Volumes/Precyte1/stage/refs/transcriptomes/hg38/fa/ensembl/Homo_sapiens.GRCh38.rel83.cdna.all.fa'
 config['tx2gene_fp'] = '/Users/mdascenzo/workspace/data/tx2gene.EnsDb.Hsapiens.v86.csv'
+
+# reference based alignment options
+config['genome_dir'] = '/Volumes/Precyte1/stage/refs/genomes'
+config['genome_id'] = 'small_dev'
+config['genome_build'] = 'hg38'
+config['genome_annotation_file'] = \
+    '/Volumes/Precyte1/stage/refs/genomes/hg38/annotation/hg38wERCC92/' +\
+    'gencode.v25.primary_assembly.annotation.wERCC92.gtf'
+
+# star options
+config['star_sj_db_overhang'] = 74
 
 out = args.out
 if not os.path.isabs(args.out):
