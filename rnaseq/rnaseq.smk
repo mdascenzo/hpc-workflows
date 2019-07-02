@@ -278,6 +278,7 @@ def multiqc_config(analysis_directory):
 	# create multiqc_config yaml file if it doesn't already exist
 	if not os.path.exists(multiqc_config_fp):
 		cfg = 'fastqc_config:' + '\n  ' + '\n  '.join(multiqc_opts) + '\n'
+		os.makedirs(analysis_directory, exist_ok=True)
 		with open(multiqc_config_fp, 'w') as f:
 			f.write(cfg)
 
