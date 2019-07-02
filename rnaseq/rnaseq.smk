@@ -1,3 +1,5 @@
+# vi:syntax=python
+
 import os
 
 from os import path
