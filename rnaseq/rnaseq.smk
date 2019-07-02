@@ -199,7 +199,8 @@ if opt_star:
 			star_genome_dir = rules.star_index.output.path
 		output:
 			bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
-			sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam')
+			sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
+			count_file = path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab')
 		params:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted SortedByCoordinate'
@@ -232,7 +233,8 @@ if opt_star:
 			bam = rules.star_align.output.bam,
 			annotation_gtf = config['genome_annotation_file']
 		output:
-			path.join(config['out'], 'star/{sample}/feature_counts.txt')
+			path.join(config['out'], 'star/{sample}/feature_counts.txt'),
+			path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
 		params:
 			strandedness = 2
 		threads: available_cpu_count()-2
@@ -247,6 +249,9 @@ if opt_star:
 
 # QC
 
+
+## fastqc
+#
 rule fastqc:
 	input:
 		read1 = lambda w: config['samples'][w.sample]['read1'],
@@ -292,10 +297,21 @@ rule multiqc:
 		expand(
 			path.join(config['out'], 'salmon/{sample}/quant.sf'),
 			sample=SAMPLES
-		) if opt_salmon else ()
+		) if opt_salmon else (),
+		(
+			expand(
+				path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab'),
+				sample=SAMPLES
+			),
+			expand(
+				path.join(config['out'], 'star/{sample}/feature_counts.txt.summary'),
+				sample=SAMPLES
+			)
+
+		) if opt_star else ()
 	output:
 		path.join(config['out'], "multiqc_report.html")
 	params:
-		'-m fastqc -m salmon --config ' + path.join(config['out'], 'multiqc_config.yaml')
+		'-m fastqc -m salmon -m star -m featureCounts --config ' + path.join(config['out'], 'multiqc_config.yaml')
 	wrapper:
 		"0.35.0/bio/multiqc"
