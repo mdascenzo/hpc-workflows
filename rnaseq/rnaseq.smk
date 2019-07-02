@@ -246,6 +246,7 @@ if opt_star:
 			"""
 
 # QC
+
 rule fastqc:
 	input:
 		read1 = lambda w: config['samples'][w.sample]['read1'],
@@ -262,9 +263,30 @@ rule fastqc:
 		fastqc --noextract {output.link_r1} {output.link_r2} -o {output.dir} &> {log}
 		"""
 
+## multiQC
+# - define custom multiqc options
+# - create multiqc_config.yaml in analysis directory if it does not already exist
+# - return full path to config file
+def multiqc_config(analysis_directory):
+
+	# multiqc configuration options
+	multiqc_opts = [
+		"fastqc_theoretical_gc: 'hg38_txome'"
+	]
+	multiqc_config_fp = os.path.join(analysis_directory, 'multiqc_config.yaml')
+
+	# create multiqc_config yaml file if it doesn't already exist
+	if not os.path.exists(multiqc_config_fp):
+		cfg = 'fastqc_config:' + '\n  ' + '\n  '.join(multiqc_opts) + '\n'
+		with open(multiqc_config_fp, 'w') as f:
+			f.write(cfg)
+
+	return multiqc_config_fp
+
 # see also https://multiqc.info/docs/#bulk-sample-renaming
 rule multiqc:
 	input:
+		multiqc_config(config['out']),
 		expand(path.join(config['out'], 'fastqc/{sample}'), sample=SAMPLES),
 		expand(
 			path.join(config['out'], 'salmon/{sample}/quant.sf'),
