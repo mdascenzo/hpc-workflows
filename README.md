@@ -10,8 +10,8 @@
 snakemake --configfile config.yml -s rnaseq.smk --cores 8
 ```
 
-###### Workflow overview
-![workflow-full](doc/rnaseq/img/dag_options.png)
+###### Analysis Workflow Options
+![workflow-full](doc/rnaseq/img/dag_options_3.png)
 
 ###### Todo:
 - Possibly create installer to move R-code to library path
