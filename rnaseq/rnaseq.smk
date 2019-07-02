@@ -133,8 +133,8 @@ rule aggrigate_tx:
 # genome_build: hg38
 # genome_id:  hg38wERCC92
 # genome_annotation_file: gencode.v25.primary_assembly.annotation.wERCC92.gtf
-# todo: add splice junction awareness
-# 		e.g. --sjdbGTFfile /path/to/gtf (e.g gencode.v25.primary_assembly.annotation.wERCC92.gtf) --sjdbOverhang 74
+# todo: check readlength, dynamically set sjdbOverhang
+# todo: allow mixed RL to be run in same analysis, currenly assumes the same for all samples
 rule star_index:
 	input:
 		fasta_files = path.join(config['genome_dir'], config['genome_build'], 'fa', config['genome_id']),
@@ -142,9 +142,15 @@ rule star_index:
 	output:
 		path = protected(
 			directory(
-				os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
+				os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'] + '_sjo' + str(config['star_sj_db_overhang']), 'star/')
 			)
 		)
+	params:
+		sj_db_overhang = str(config['star_sj_db_overhang'])
+	# parameters:
+	#	sjdbOverhang: 	'int>0: length of the donor/acceptor sequence on each side of the junctions'
+	#		- value: set to ReadLength-1 (e.g. 75-1 for 75bp reads)
+	#		- ref: STAR Manual (v2.6.1+)
 	run:
 		# check/create if output directory exists
 		#if not os.path.exists(output.output_dir):
@@ -154,7 +160,7 @@ rule star_index:
 		# add optional parameters
 		if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 			command += ' --sjdbGTFfile ' + input.annotation_gtf
-			command += ' --sjdbOverhang ' + str(config['star_sj_db_overhang'])
+			command += ' --sjdbOverhang ' + params.sj_db_overhang
 
 		shell(command)
 
@@ -163,7 +169,8 @@ rule star_align:
 	input:
 		read1 = lambda w: config['samples'][w.sample]['read1'],
 		read2 = lambda w: config['samples'][w.sample]['read2'],
-		star_genome_dir = os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
+		#star_genome_dir = os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
+		star_genome_dir = rules.star_index.output.path
 	output:
 		bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
 		sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam')
