@@ -237,6 +237,7 @@ if opt_star:
 		params:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted SortedByCoordinate'
+		# note: setting threads too high for this process may result in a ulimit error on osx
 		threads: 4
 		# parameters:
 		#	quantMode: 'TranscriptomeSAM GeneCounts'
