@@ -1,6 +1,7 @@
 # vi:syntax=python
 
 import os
+import glob
 
 from os import path
 # todo: add validation step
@@ -27,22 +28,40 @@ opt_salmon = config['salmon']
 SAMPLES = config['samples']
 SAMPLE_IDS = list(SAMPLES.keys())
 
-# location of salmon index directory
-salmon_index_location =\
-	os.path.join(
-		os.path.dirname(config['transcripts_fa']),
-		'salmon',
-		os.path.splitext(os.path.basename(config['transcripts_fa']))[0]
-	)
-
-# todo: validate config input to ensure all files exist, generalize
-
 # set default options
 opts = dict()
 opts['salmon-quant-l'] = 'ISR'
 # override default options with config based options
 if 'options' in config:
 	opts.update(config['options'])
+
+
+# record versions of aligners used for index building purposes
+star_version = os.popen("echo `star --version`").read().rstrip()
+salmon_version = os.popen("echo `salmon --version`").read().rstrip().split(' ')[1]
+
+# location of salmon index directory
+# salmon_index_location =\
+# 	os.path.join(
+# 		os.path.dirname(config['transcripts_fa']),
+# 		'salmon',
+# 		os.path.splitext(os.path.basename(config['transcripts_fa']))[0]
+# 	)
+salmon_index_location =\
+	os.path.join(
+		config['resources_dir'], 'transcriptomes', config['build'],
+		config['tx_uid'], 'indexes/salmon', salmon_version
+	) + '/'
+star_index_location =\
+	os.path.join(
+		config['resources_dir'], 'genomes', config['build'],
+		config['genome_uid'], 'indexes/star', star_version + '_sjo' + str(config['star_sj_db_overhang'])
+	) + '/'
+
+print(salmon_index_location)
+print(star_index_location)
+
+# todo: validate config input to ensure all files exist, generalize
 
 
 def set_log(name):
@@ -83,7 +102,9 @@ if opt_salmon:
 
 	rule salmon_index:
 		input:
-			config['transcripts_fa']
+			tx_fa = glob.glob(path.join(
+				config['resources_dir'], 'transcriptomes', config['build'], config['tx_uid'], 'fa', '*.fa'
+			))
 		# index transcript fasta file if the directory does not already exist
 		output:
 			protected(
@@ -92,9 +113,12 @@ if opt_salmon:
 				)
 			)
 		log: 'salmon/salmon_index.log'
+
+		threads: available_cpu_count()-2
+
 		shell:
 			"""
-			salmon index -t {input} -i {output} &> {log}
+			salmon index --threads {threads} -t {input.tx_fa} -i {output} &> {log}
 			"""
 
 	# salmon libtype https://salmon.readthedocs.io/en/latest/salmon.html#what-s-this-libtype
@@ -110,9 +134,11 @@ if opt_salmon:
 			l = opts['salmon-quant-l']
 		log: set_log('salmon/{sample}/stdout.log')
 
+		threads: available_cpu_count()-2
+
 		run:
 			output_dir = os.path.dirname(output[0])
-			shell("salmon quant -i {input.index} -l {params.l} -1 {input.read1} -2 {input.read2} --validateMappings -o {output_dir} &> {log}")
+			shell("salmon quant --threads {threads} -i {input.index} -l {params.l} -1 {input.read1} -2 {input.read2} --validateMappings -o {output_dir} &> {log}")
 
 
 	# https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
@@ -166,12 +192,16 @@ if opt_star:
 	# todo: create subdirectory based on GTF file, link or include GTF file with index
 	rule star_index:
 		input:
-			fasta_files = path.join(config['genome_dir'], config['genome_build'], 'fa', config['genome_id']),
-			annotation_gtf = config['genome_annotation_file']
+			fasta_files = path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa', '*.fa'
+			),
+			annotation_gtf = glob.glob(path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
+			))
 		output:
 			path = protected(
 				directory(
-					os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'] + '_sjo' + str(config['star_sj_db_overhang']), 'star/')
+					star_index_location
 				)
 			)
 		params:
@@ -180,12 +210,13 @@ if opt_star:
 		#	sjdbOverhang: 	'int>0: length of the donor/acceptor sequence on each side of the junctions'
 		#		- value: set to ReadLength-1 (e.g. 75-1 for 75bp reads)
 		#		- ref: STAR Manual (v2.6.1+)
+		threads: available_cpu_count()-2
 		run:
 			# check/create if output directory exists
 			#if not os.path.exists(output.output_dir):
 			#	os.makedirs(output.output_dir)
 			command =\
-			"star --runMode genomeGenerate --runThreadN 1 --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
+			"star --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files} --genomeDir {output.path} --outFileNamePrefix {output.path}"
 			# add optional parameters
 			if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 				command += ' --sjdbGTFfile ' + input.annotation_gtf
