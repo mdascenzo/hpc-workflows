@@ -237,7 +237,7 @@ if opt_star:
 		params:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted SortedByCoordinate'
-		threads: available_cpu_count()-2
+		threads: 4
 		# parameters:
 		#	quantMode: 'TranscriptomeSAM GeneCounts'
 		#		- output: 	1) alignments translated into transcript coordinates
@@ -268,8 +268,8 @@ if opt_star:
 				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
 			))
 		output:
-			path.join(config['out'], 'star/{sample}/feature_counts.txt'),
-			path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
+			basename = path.join(config['out'], 'star/{sample}/feature_counts.txt'),
+			summary = path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
 		params:
 			strandedness = 2
 		threads: available_cpu_count()-2
@@ -279,7 +279,7 @@ if opt_star:
 		#	-s 0|1|2 : unstranded|stranded|reversely stranded
 		shell:
 			"""
-			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output} {input.bam}
+			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
 			"""
 
 # QC
