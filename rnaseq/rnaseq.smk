@@ -193,11 +193,11 @@ if opt_star:
 	rule star_index:
 		input:
 			fasta_files = path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa', '*.fa'
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa'
 			),
 			annotation_gtf = glob.glob(path.join(
 				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
-			))
+			))[0]
 		output:
 			path = protected(
 				directory(
@@ -216,7 +216,7 @@ if opt_star:
 			#if not os.path.exists(output.output_dir):
 			#	os.makedirs(output.output_dir)
 			command =\
-			"star --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files} --genomeDir {output.path} --outFileNamePrefix {output.path}"
+			"star --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
 			# add optional parameters
 			if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 				command += ' --sjdbGTFfile ' + input.annotation_gtf
@@ -264,7 +264,9 @@ if opt_star:
 		input:
 			#bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
 			bam = rules.star_align.output.bam,
-			annotation_gtf = config['genome_annotation_file']
+			annotation_gtf = glob.glob(path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
+			))
 		output:
 			path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 			path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
