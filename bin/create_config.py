@@ -20,21 +20,17 @@ config = collections.OrderedDict()
 config['analysis_name'] = 'rnaseq_analysis'
 
 # analysis options
-config['star'] = "No"
+config['star'] = 'No'
 config['salmon'] = 'Yes'
 
-# reference free alignment options
-config['transcripts_fa'] = \
-    '/Volumes/Precyte1/stage/refs/transcriptomes/hg38/fa/ensembl/Homo_sapiens.GRCh38.rel83.cdna.all.fa'
-config['tx2gene_fp'] = '/Users/mdascenzo/workspace/data/tx2gene.EnsDb.Hsapiens.v86.csv'
+config['resources_dir'] = '/Users/mdascenzo/mnt/Precyte1/stage/resources'
+config['build'] = 'hg38'
+config['genome_uid'] = 'hg38dev'
+config['tx_uid'] = 'ensembl_rel83'
 
-# reference based alignment options
-config['genome_dir'] = '/Volumes/Precyte1/stage/refs/genomes'
-config['genome_id'] = 'small_dev'
-config['genome_build'] = 'hg38'
-config['genome_annotation_file'] = \
-    '/Volumes/Precyte1/stage/refs/genomes/hg38/annotation/hg38wERCC92/' +\
-    'gencode.v25.primary_assembly.annotation.wERCC92.gtf'
+# todo: update / sync versions
+config['tx2gene_fp'] =\
+    '/Users/mdascenzo/mnt/Precyte1/stage/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
 
 # star options
 config['star_sj_db_overhang'] = 74
