@@ -58,11 +58,9 @@ star_index_location =\
 		config['genome_uid'], 'indexes/star', star_version + '_sjo' + str(config['star_sj_db_overhang'])
 	) + '/'
 
-print(salmon_index_location)
-print(star_index_location)
-
-# todo: validate config input to ensure all files exist, generalize
-
+# todo:
+# 	- validate config input to ensure all files exist, generaliz (e.g. all genome files, annotation files, etc.)
+# 	- add auto-detect of read size.
 
 def set_log(name):
 	return os.path.join(config['out'], name)
@@ -138,7 +136,20 @@ if opt_salmon:
 
 		run:
 			output_dir = os.path.dirname(output[0])
-			shell("salmon quant --threads {threads} -i {input.index} -l {params.l} -1 {input.read1} -2 {input.read2} --validateMappings -o {output_dir} &> {log}")
+			cmd =\
+			"""
+			salmon quant \
+				--threads {threads} \
+				-i {input.index} \
+				-l {params.l} \
+				-1 {input.read1} \
+				-2 {input.read2} \
+				--validateMappings \
+				--gcBias \
+				--seqBias \
+				-o {output_dir} &> {log}
+			"""
+			shell(cmd)
 
 
 	# https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
