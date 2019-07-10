@@ -163,13 +163,25 @@ if opt_salmon:
 			salmon index --threads {threads} -t {input.tx_fa} -i {output} &> {log}
 			"""
 
+	def salmon_input(w):
+
+		input = {}
+
+		if opt_trim:
+			input['read1'] = rules.trim_reads.output.read1_paired
+			input['read2'] = rules.trim_reads.output.read2_paired
+		else:
+			input['read1'] = config['samples'][w.sample]['read1']
+			input['read2'] =config['samples'][w.sample]['read2']
+
+		return input
+
 	# salmon libtype https://salmon.readthedocs.io/en/latest/salmon.html#what-s-this-libtype
 	# pub: https://www.biorxiv.org/content/biorxiv/early/2016/08/30/021592.full.pdf
 	rule salmon_quant:
 		input:
+			unpack(salmon_input),
 			index = salmon_index_location,
-			read1 = lambda w: config['samples'][w.sample]['read1'],
-			read2 = lambda w: config['samples'][w.sample]['read2']
 		output:
 			quant = path.join(config['out'], 'salmon/{sample}/quant.sf')
 		params:
@@ -279,21 +291,34 @@ if opt_star:
 
 			shell(command)
 
+
+	def star_align_input(w):
+
+		input = {}
+
+		if opt_trim:
+			input['read1'] = rules.trim_reads.output.read1_paired
+			input['read2'] = rules.trim_reads.output.read2_paired
+		else:
+			input['read1'] = config['samples'][w.sample]['read1']
+			input['read2'] = config['samples'][w.sample]['read2']
+
+		return input
+
+
 	rule star_align:
 		input:
-			read1 = lambda w: config['samples'][w.sample]['read1'],
-			read2 = lambda w: config['samples'][w.sample]['read2'],
-			#star_genome_dir = os.path.join(config['genome_dir'], config['genome_build'], 'indexes', config['genome_id'], 'star/')
+			unpack(star_align_input),
 			star_genome_dir = rules.star_index.output.path
 		output:
 			bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
-			sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
+			#sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
 			count_file = path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab')
 		params:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
-			out_sam_type = 'BAM Unsorted SortedByCoordinate'
+			out_sam_type = 'BAM Unsorted'
 		# note: setting threads too high for this process may result in a ulimit error on osx
-		threads: 4
+		threads: 6
 		# parameters:
 		#	quantMode: 'TranscriptomeSAM GeneCounts'
 		#		- output: 	1) alignments translated into transcript coordinates
@@ -308,13 +333,11 @@ if opt_star:
 			"""
 			star --runThreadN {threads} \
 				 --genomeDir {input.star_genome_dir} \
-				 --readFilesCommand gzcat \
-				 --readFilesIn {input.read1} {input.read2} \
-				 --outFileNamePrefix  $(dirname {output.sorted_bam})/ \
+				 --readFilesIn <(gunzip -c {input.read1}) <(gunzip -c {input.read2}) \
+				 --outFileNamePrefix  $(dirname {output.bam})/ \
 				 --quantMode {params.quant_mode} \
 				 --outSAMtype {params.out_sam_type}
 			"""
-
 
 	rule feature_counts:
 		input:
@@ -343,7 +366,7 @@ if opt_star:
 # QC
 ## fastqc
 #
-def fastqc(w):
+def fastqc_input(w):
 
 	input = {}
 
@@ -358,7 +381,7 @@ def fastqc(w):
 
 rule fastqc:
 	input:
-		unpack(fastqc)
+		unpack(fastqc_input)
 	output:
 		dir = directory(path.join(config['out'], 'fastqc/{sample}')),
 		link_r1 = path.join(config['out'], 'fastqc/input', '{sample}_R1.fastq.gz'),
