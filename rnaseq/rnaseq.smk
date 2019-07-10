@@ -21,6 +21,7 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # load analysis options
 opt_star = config['star']
 opt_salmon = config['salmon']
+opt_trim = config['trim']
 
 # set default configuration file
 #configfile: 'config.yml'
@@ -31,10 +32,21 @@ SAMPLE_IDS = list(SAMPLES.keys())
 # set default options
 opts = dict()
 opts['salmon-quant-l'] = 'ISR'
+opts['trimmomatic-adapters-fa'] = 'TruSeq3-PE-2.fa'
 # override default options with config based options
 if 'options' in config:
 	opts.update(config['options'])
 
+# get full path to adapters_fa
+# if a full path is not provided via opts use share directory relative to trimmomatic bin directory
+if not os.path.isabs(opts['trimmomatic-adapters-fa']):
+	opts['trimmomatic-adapters-fa'] = os.path.abspath(
+		os.path.join(
+			os.popen("echo `which trimmomatic`").read().rstrip(),
+			'../../share/trimmomatic/adapters',
+			opts['trimmomatic-adapters-fa']
+		)
+	)
 
 # record versions of aligners used for index building purposes
 star_version = os.popen("echo `star --version`").read().rstrip()
@@ -95,6 +107,38 @@ rule all:
 	#output:
 	#	path.join(config['out'], 'dag.pdf')
 	#shell: "snakemake -s rnaseq.smk --rulegraph | dot -Tpdf > {output}"
+
+
+#if opt_trim_reads:
+
+if opt_trim:
+
+	rule trim_reads:
+		input:
+			read1 = lambda w: config['samples'][w.sample]['read1'],
+			read2 = lambda w: config['samples'][w.sample]['read2']
+		output:
+			read1_paired = path.join(config['out'], 'trim_reads', '{sample}_R1_trimmed_paired.fq.gz'),
+			read1_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R1_trimmed_unpaired.fq.gz'),
+			read2_paired =  path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_paired.fq.gz'),
+			read2_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_unpaired.fq.gz')
+		params:
+			adapters = opts['trimmomatic-adapters-fa'],
+			threads = available_cpu_count()-2
+		shell:
+			"""
+			trimmomatic PE \
+				-threads {params.threads} \
+				{input.read1} \
+				{input.read2} \
+				{output.read1_paired} \
+				{output.read1_unpaired} \
+				{output.read2_paired} \
+				{output.read2_unpaired} \
+				ILLUMINACLIP:{params.adapters}:2:30:10:2:TRUE \
+				MINLEN:25			
+			"""
+
 
 if opt_salmon:
 
@@ -294,15 +338,27 @@ if opt_star:
 			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
 			"""
 
+
+
 # QC
-
-
 ## fastqc
 #
+def fastqc(w):
+
+	input = {}
+
+	if opt_trim:
+		input['read1'] = rules.trim_reads.output.read1_paired
+		input['read2'] = rules.trim_reads.output.read2_paired
+	else:
+		input['read1'] = config['samples'][w.sample]['read1']
+		input['read2'] =config['samples'][w.sample]['read2']
+
+	return input
+
 rule fastqc:
 	input:
-		read1 = lambda w: config['samples'][w.sample]['read1'],
-		read2 = lambda w: config['samples'][w.sample]['read2']
+		unpack(fastqc)
 	output:
 		dir = directory(path.join(config['out'], 'fastqc/{sample}')),
 		link_r1 = path.join(config['out'], 'fastqc/input', '{sample}_R1.fastq.gz'),
