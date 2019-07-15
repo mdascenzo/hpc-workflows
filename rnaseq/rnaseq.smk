@@ -16,10 +16,11 @@ from rpy2.rinterface import RRuntimeWarning
 warnings.filterwarnings("ignore", category=RRuntimeWarning)
 
 # todo:
-# 	- validate config input to ensure all files exist, generalize (e.g. all genome files, annotation files, etc.)
-# 	- consider adding read length auto-detect
-# 	- further generalize configuration section
-
+# 	- configuration: further generalize
+# 	- configuration: validate config input to ensure all files exist
+# 	- rule.star_align: consider adding read length auto-detect, set sjdbOverhang dynamically
+# 	- rule.star_align: consider adding mixed RL to be run in same analysis, currenly assumes the same for all samples
+# 	- rule.star_align: create subdirectory based on GTF file, link or include GTF file with index
 
 __VERSION__ = "0.0.1"
 
@@ -304,11 +305,6 @@ if opt_salmon:
 
 
 if opt_star:
-
-
-	# todo: check readlength, dynamically set sjdbOverhang
-	# todo: allow mixed RL to be run in same analysis, currenly assumes the same for all samples
-	# todo: create subdirectory based on GTF file, link or include GTF file with index
 
 	# rule.salmon_index
 	#
