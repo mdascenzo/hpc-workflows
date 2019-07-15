@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # 	- configuration: further generalize
 # 	- configuration: validate config input to ensure all files exist
 # 	- rule.star_align: consider adding read length auto-detect, set sjdbOverhang dynamically
-# 	- rule.star_align: consider adding mixed RL to be run in same analysis, currenly assumes the same for all samples
+# 	- rule.star_align: consider adding mixed RL to be run in same analysis, currently assumes the same for all samples
 # 	- rule.star_align: create subdirectory based on GTF file, link or include GTF file with index
 
 __VERSION__ = "0.0.1"
