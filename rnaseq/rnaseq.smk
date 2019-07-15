@@ -80,9 +80,9 @@ star_index_location =\
 def set_log(name):
 	return os.path.join(config['out'], name)
 
-# ----------------
-# workflow rules
-# ----------------
+# ------------------------------
+# Workflow Rules and Functions
+# ------------------------------
 
 rule all:
 	input:
@@ -299,11 +299,7 @@ if opt_salmon:
 			
 			""")
 
-# STAR provides referenced based quantification:
-# reference:
-#
-# optionally include STAR and downstream analysis components
-#
+
 if opt_star:
 
 
