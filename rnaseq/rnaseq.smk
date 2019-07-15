@@ -20,6 +20,9 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # 	- consider adding read length auto-detect
 # 	- further generalize configuration section
 
+
+__VERSION__ = "0.0.1"
+
 # ---------------
 # Configuration
 # ---------------
