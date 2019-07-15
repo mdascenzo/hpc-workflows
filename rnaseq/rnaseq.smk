@@ -1,15 +1,13 @@
 # vi:syntax=python
-
-import os
+import os, sys
 import glob
-
 from os import path
-# todo: add validation step
-from snakemake.io import protected, expand
+from snakemake.io import protected, expand, unpack
 from snakemake.io import directory
 from snakemake import shell, rules
 from snakemake.utils import R
 from snakemake.utils import update_config, available_cpu_count
+from snakemake.exceptions import WorkflowError
 
 # r2py reports all stdout using warnings
 # ignore warnings to maintain cleaner stdout
@@ -17,14 +15,27 @@ import warnings
 from rpy2.rinterface import RRuntimeWarning
 warnings.filterwarnings("ignore", category=RRuntimeWarning)
 
+# todo:
+# 	- validate config input to ensure all files exist, generalize (e.g. all genome files, annotation files, etc.)
+# 	- consider adding read length auto-detect
+# 	- further generalize configuration section
+
+# ---------------
+# Configuration
+# ---------------
+
+# set default configuration file.
+# also settable via commandline --configfile parameter which takes precedence over this assignment
+if os.path.exists('config.yml'):
+	configfile: 'config.yml'
+if not config:
+	raise WorkflowError('config file not found')
 
 # load analysis options
 opt_star = config['star']
 opt_salmon = config['salmon']
-opt_trim = config['trim']
-
-# set default configuration file
-#configfile: 'config.yml'
+# require that trim option be explicitly set in config, false otherwise
+opt_trim = config['trim'] if 'trim' in config else False
 
 SAMPLES = config['samples']
 SAMPLE_IDS = list(SAMPLES.keys())
@@ -37,7 +48,7 @@ opts['trimmomatic-adapters-fa'] = 'TruSeq3-PE-2.fa'
 if 'options' in config:
 	opts.update(config['options'])
 
-# get full path to adapters_fa
+# trimmomatic.adapters_fa
 # if a full path is not provided via opts use share directory relative to trimmomatic bin directory
 if not os.path.isabs(opts['trimmomatic-adapters-fa']):
 	opts['trimmomatic-adapters-fa'] = os.path.abspath(
@@ -53,29 +64,25 @@ star_version = os.popen("echo `star --version`").read().rstrip()
 salmon_version = os.popen("echo `salmon --version`").read().rstrip().split(' ')[1]
 
 # location of salmon index directory
-# salmon_index_location =\
-# 	os.path.join(
-# 		os.path.dirname(config['transcripts_fa']),
-# 		'salmon',
-# 		os.path.splitext(os.path.basename(config['transcripts_fa']))[0]
-# 	)
 salmon_index_location =\
 	os.path.join(
 		config['resources_dir'], 'transcriptomes', config['build'],
 		config['tx_uid'], 'indexes/salmon', salmon_version
 	) + '/'
+# location of star index directory
 star_index_location =\
 	os.path.join(
 		config['resources_dir'], 'genomes', config['build'],
 		config['genome_uid'], 'indexes/star', star_version + '_sjo' + str(config['star_sj_db_overhang'])
 	) + '/'
 
-# todo:
-# 	- validate config input to ensure all files exist, generaliz (e.g. all genome files, annotation files, etc.)
-# 	- add auto-detect of read size.
 
 def set_log(name):
 	return os.path.join(config['out'], name)
+
+# ----------------
+# workflow rules
+# ----------------
 
 rule all:
 	input:
@@ -104,44 +111,70 @@ rule all:
 
 		) if opt_star else ()
 
-	#output:
-	#	path.join(config['out'], 'dag.pdf')
-	#shell: "snakemake -s rnaseq.smk --rulegraph | dot -Tpdf > {output}"
+
+def trim_reads_input(w):
+	"""
+	Evaluate global and local trim settings for processing by rule.trim_reads
+
+	:param w: snakemake wildcard
+	:return: input parameters
+	"""
+
+	input_parameters = {}
+
+	if opt_trim or config['samples'][w.sample].get('trim'):
+
+	 	input_parameters['read1'] = config['samples'][w.sample]['read1']
+	 	input_parameters['read2'] = config['samples'][w.sample]['read2']
+
+	return input_parameters
 
 
-#if opt_trim_reads:
-
-if opt_trim:
-
-	rule trim_reads:
-		input:
-			read1 = lambda w: config['samples'][w.sample]['read1'],
-			read2 = lambda w: config['samples'][w.sample]['read2']
-		output:
-			read1_paired = path.join(config['out'], 'trim_reads', '{sample}_R1_trimmed_paired.fq.gz'),
-			read1_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R1_trimmed_unpaired.fq.gz'),
-			read2_paired =  path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_paired.fq.gz'),
-			read2_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_unpaired.fq.gz')
-		params:
-			adapters = opts['trimmomatic-adapters-fa'],
-			threads = available_cpu_count()-2
-		shell:
-			"""
-			trimmomatic PE \
-				-threads {params.threads} \
-				{input.read1} \
-				{input.read2} \
-				{output.read1_paired} \
-				{output.read1_unpaired} \
-				{output.read2_paired} \
-				{output.read2_unpaired} \
-				ILLUMINACLIP:{params.adapters}:2:30:10:2:TRUE \
-				MINLEN:25			
-			"""
+# rule.trim_reads
+#
+#	Description: 	Optionally trim adapter sequence from paired-end reads using Trimmomatic.
+#
+# 	Reference: 		Bolger, A.M., Lohse, M., Usadel, B., 2014. Trimmomatic: a flexible trimmer for Illumina sequence data.
+# 					Bioinformatics 30, 2114–2120. https://doi.org/10.1093/bioinformatics/btu170
+#
+rule trim_reads:
+	input:
+		unpack(trim_reads_input)
+	output:
+		read1_paired = path.join(config['out'], 'trim_reads', '{sample}_R1_trimmed_paired.fq.gz'),
+		read1_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R1_trimmed_unpaired.fq.gz'),
+		read2_paired =  path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_paired.fq.gz'),
+		read2_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_unpaired.fq.gz')
+	params:
+		adapters = opts['trimmomatic-adapters-fa'],
+		threads = available_cpu_count()-2
+	shell:
+		"""
+		trimmomatic PE \
+			-threads {params.threads} \
+			{input.read1} \
+			{input.read2} \
+			{output.read1_paired} \
+			{output.read1_unpaired} \
+			{output.read2_paired} \
+			{output.read2_unpaired} \
+			ILLUMINACLIP:{params.adapters}:2:30:10:2:TRUE \
+			MINLEN:25			
+		"""
 
 
 if opt_salmon:
 
+	# rule.salmon_index
+	#
+	#	Description: 	Create index for Salmon quasi-mapping analysis
+	#
+	# 	Reference: 		Patro, R., Duggal, G., Love, M.I., Irizarry, R.A., Kingsford, C., 2017. Salmon provides fast and bias-aware
+	# 					quantification of transcript expression.
+	# 					Nature Methods 14, 417–419. https://doi.org/10.1038/nmeth.4197
+	#
+	#	Documentation:	https://salmon.readthedocs.io/en/latest/salmon.html
+	#
 	rule salmon_index:
 		input:
 			tx_fa = glob.glob(path.join(
@@ -164,20 +197,33 @@ if opt_salmon:
 			"""
 
 	def salmon_input(w):
+		"""
+		Provide rule.salmon_quant with either trimmed or un-trimmed reads given global and local trim settings
 
+		:param w: snakemake wildcard
+		:return: input parameters
+		"""
 		input = {}
 
-		if opt_trim:
+		if opt_trim or config['samples'][w.sample].get('trim'):
 			input['read1'] = rules.trim_reads.output.read1_paired
 			input['read2'] = rules.trim_reads.output.read2_paired
 		else:
 			input['read1'] = config['samples'][w.sample]['read1']
-			input['read2'] =config['samples'][w.sample]['read2']
+			input['read2'] = config['samples'][w.sample]['read2']
 
 		return input
 
-	# salmon libtype https://salmon.readthedocs.io/en/latest/salmon.html#what-s-this-libtype
-	# pub: https://www.biorxiv.org/content/biorxiv/early/2016/08/30/021592.full.pdf
+	# rule.salmon_quant
+	#
+	# 	Reference:		Patro, R., Duggal, G., Love, M.I., Irizarry, R.A., Kingsford, C., 2017. Salmon provides fast and bias-aware
+	# 					quantification of transcript expression.
+	# 					Nature Methods 14, 417–419. https://doi.org/10.1038/nmeth.4197
+	#
+	#	Documentation:	https://salmon.readthedocs.io/en/latest/salmon.html
+	#
+	# 	Notes: 			Salmon libtype -  https://salmon.readthedocs.io/en/latest/salmon.html#what-s-this-libtype
+	#
 	rule salmon_quant:
 		input:
 			unpack(salmon_input),
@@ -208,7 +254,18 @@ if opt_salmon:
 			shell(cmd)
 
 
-	# https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
+
+	# rule.aggrigate_tx
+	#
+	#	Description: 	Aggrigate transcript-level qunatification to gene-level.
+	#
+	# 	Reference:		Soneson, C., Love, M.I., Robinson, M.D., 2016. Differential analyses for RNA-seq:
+	# 					transcript-level estimates improve gene-level inferences.
+	# 					F1000Res 4, 1521–1521. https://doi.org/10.12688/f1000research.7563.2
+	#
+	#	Documentation:	https://bioconductor.org/packages/devel/bioc/manuals/tximport/man/tximport.pdf
+	#	R-Vignette: 	https://bioconductor.org/packages/devel/bioc/vignettes/tximport/inst/doc/tximport.html
+	#
 	rule aggrigate_tx:
 		input:
 			tx2gene_fp = config['tx2gene_fp'],
@@ -243,20 +300,30 @@ if opt_salmon:
 			""")
 
 # STAR provides referenced based quantification:
-# reference: https://github.com/alexdobin/STAR/blob/2.6.1d/doc/STARmanual.pdf
+# reference:
 #
 # optionally include STAR and downstream analysis components
 #
 if opt_star:
 
-	## example config parameter values
-	# genome_dir: /Precyte1/tmp/refs/genomes
-	# genome_build: hg38
-	# genome_id:  hg38wERCC92
-	# genome_annotation_file: gencode.v25.primary_assembly.annotation.wERCC92.gtf
+
 	# todo: check readlength, dynamically set sjdbOverhang
 	# todo: allow mixed RL to be run in same analysis, currenly assumes the same for all samples
 	# todo: create subdirectory based on GTF file, link or include GTF file with index
+
+	# rule.salmon_index
+	#
+	#	Description: 	Create index for Salmon quasi-mapping analysis
+	#
+	# 	Reference: 		Dobin, A., Davis, C.A., Schlesinger, F., Drenkow, J., Zaleski, C., Jha, S., Batut, P., Chaisson, M.,
+	# 					Gingeras, T.R., 2013. STAR: ultrafast universal RNA-seq aligner.
+	# 					Bioinformatics 29, 15–21. https://doi.org/10.1093/bioinformatics/bts635
+	#
+	#	Documentation:	https://github.com/alexdobin/STAR/blob/2.6.1d/doc/STARmanual.pdf
+	#
+	#	Notes:			--sjdbOverhang: int>0: length of the donor/acceptor sequence on each side of the junctions
+	#									Set to ReadLength-1 (e.g. 75-1 for 75bp reads)
+	#
 	rule star_index:
 		input:
 			fasta_files = path.join(
@@ -273,15 +340,10 @@ if opt_star:
 			)
 		params:
 			sj_db_overhang = str(config['star_sj_db_overhang'])
-		# parameters:
-		#	sjdbOverhang: 	'int>0: length of the donor/acceptor sequence on each side of the junctions'
-		#		- value: set to ReadLength-1 (e.g. 75-1 for 75bp reads)
-		#		- ref: STAR Manual (v2.6.1+)
+
 		threads: available_cpu_count()-2
+
 		run:
-			# check/create if output directory exists
-			#if not os.path.exists(output.output_dir):
-			#	os.makedirs(output.output_dir)
 			command =\
 			"star --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
 			# add optional parameters
@@ -293,10 +355,15 @@ if opt_star:
 
 
 	def star_align_input(w):
+		"""
+		Provide rule.star_align with either trimmed or un-trimmed reads given global and local trim settings
 
+		:param w: snakemake wildcard
+		:return: input parameters
+		"""
 		input = {}
 
-		if opt_trim:
+		if opt_trim or config['samples'][w.sample].get('trim'):
 			input['read1'] = rules.trim_reads.output.read1_paired
 			input['read2'] = rules.trim_reads.output.read2_paired
 		else:
@@ -306,30 +373,34 @@ if opt_star:
 		return input
 
 
+	# rule.star_align
+	#
+	#	Description: 	Align paired-end reads
+	#
+	# 	Reference: 		Dobin, A., Davis, C.A., Schlesinger, F., Drenkow, J., Zaleski, C., Jha, S., Batut, P., Chaisson, M.,
+	# 					Gingeras, T.R., 2013. STAR: ultrafast universal RNA-seq aligner.
+	# 					Bioinformatics 29, 15–21. https://doi.org/10.1093/bioinformatics/bts635
+	#
+	#	Documentation:	https://github.com/alexdobin/STAR/blob/2.6.1d/doc/STARmanual.pdf
+	#
+	#	Notes: 			--genomeLoad: LoadAndKeep option appears to be osx incompatible, possibly containerize for improved performance
+	#
+	#					- Unsorted output can be directly input into featureCounts
+	#					- Setting threads too high for this process may result in a ulimit error on osx
 	rule star_align:
 		input:
 			unpack(star_align_input),
 			star_genome_dir = rules.star_index.output.path
 		output:
 			bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
-			#sorted_bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
 			count_file = path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab')
 		params:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted'
-		# note: setting threads too high for this process may result in a ulimit error on osx
+
 		threads: 6
-		# parameters:
-		#	quantMode: 'TranscriptomeSAM GeneCounts'
-		#		- output: 	1) alignments translated into transcript coordinates
-		#					2) number of reads/gene
-		#		- ref: STAR Manual (v2.6.1+) - "Counting number of reads per gene."
-		#	outSAMtype: 'BAM Unsorted SortedByCoordinate'
-		#		- output: 	1) unsorted bam file
-		#					2) sorted bam file
-		#		- notes:	"Unsorted" output can be directly input into featureCounts
+
 		shell:
-			# option: --genomeLoad LoadAndKeep : osx incompatible
 			"""
 			star --runThreadN {threads} \
 				 --genomeDir {input.star_genome_dir} \
@@ -339,9 +410,22 @@ if opt_star:
 				 --outSAMtype {params.out_sam_type}
 			"""
 
+	# rule.feature_counts
+	#
+	#	Description: 	Quantify alignments at gene-level
+	#
+	# 	Reference: 		Liao, Y., Smyth, G.K., Shi, W., 2014. featureCounts: an efficient general purpose program for assigning
+	# 					sequence reads to genomic features.
+	# 					Bioinformatics 30, 923–930. https://doi.org/10.1093/bioinformatics/btt656
+	#
+	#	Documentation:	https://github.com/alexdobin/STAR/blob/2.6.1d/doc/STARmanual.pdf
+	#
+	#	Notes:			-p include if read are paired-end
+	#					-B only count read-pairs that have both ends aligned
+	#					-s 0|1|2 : unstranded|stranded|reversely stranded
+	#
 	rule feature_counts:
 		input:
-			#bam = path.join(config['out'], 'star/{sample}/Aligned.sortedByCoord.out.bam'),
 			bam = rules.star_align.output.bam,
 			annotation_gtf = glob.glob(path.join(
 				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
@@ -351,34 +435,42 @@ if opt_star:
 			summary = path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
 		params:
 			strandedness = 2
+
 		threads: available_cpu_count()-2
-		# parameters:
-		#	-p include if read are paired-end
-		#	-B only count read-pairs that have both ends aligned
-		#	-s 0|1|2 : unstranded|stranded|reversely stranded
+
 		shell:
 			"""
 			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
 			"""
 
 
-
-# QC
-## fastqc
-#
 def fastqc_input(w):
+	"""
+	Provide rule.fastqc with either trimmed or un-trimmed reads given global and local trim settings
 
+	:param w: snakemake wildcard
+	:return: input parameters
+	"""
 	input = {}
 
-	if opt_trim:
+	if opt_trim or config['samples'][w.sample].get('trim'):
 		input['read1'] = rules.trim_reads.output.read1_paired
 		input['read2'] = rules.trim_reads.output.read2_paired
 	else:
 		input['read1'] = config['samples'][w.sample]['read1']
-		input['read2'] =config['samples'][w.sample]['read2']
+		input['read2'] = config['samples'][w.sample]['read2']
 
 	return input
 
+# rule.fastqc
+#
+#	Description: 	Provides general QC metrics
+#
+# 	Reference: 		Andrews S. (2010). FastQC: a quality control tool for high throughput sequence data.
+# 					http://www.bioinformatics.babraham.ac.uk/projects/fastqc
+#
+#	Documentation:	https://www.bioinformatics.babraham.ac.uk/projects/fastqc/Help/
+#
 rule fastqc:
 	input:
 		unpack(fastqc_input)
@@ -394,11 +486,13 @@ rule fastqc:
 		fastqc --noextract {output.link_r1} {output.link_r2} -o {output.dir} &> {log}
 		"""
 
-## multiQC
-# - define custom multiqc options
-# - create multiqc_config.yaml in analysis directory if it does not already exist
-# - return full path to config file
 def multiqc_config(analysis_directory):
+	"""
+	Define custom multiqc options, create multiqc_config.yaml in analysis directory if it does not already exist
+
+	:param analysis_directory:
+	:return: full path to config file
+	"""
 
 	# multiqc configuration options
 	multiqc_opts = [
@@ -415,7 +509,17 @@ def multiqc_config(analysis_directory):
 
 	return multiqc_config_fp
 
-# see also https://multiqc.info/docs/#bulk-sample-renaming
+
+# rule.fastqc
+#
+#	Description: 	Aggregate QC metrics into single report
+#
+# 	Reference: 		Ewels, P., Magnusson, M., Lundin, S., Käller, M., 2016. MultiQC: summarize analysis results for multiple tools
+# 					and samples in a single report.
+# 					Bioinformatics 32, 3047–3048. https://doi.org/10.1093/bioinformatics/btw354
+#
+#	Documentation:	https://multiqc.info/docs
+#
 rule multiqc:
 	input:
 		multiqc_config(config['out']),
