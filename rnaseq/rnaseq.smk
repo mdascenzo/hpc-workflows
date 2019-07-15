@@ -151,11 +151,12 @@ rule trim_reads:
 		read2_unpaired = path.join(config['out'], 'trim_reads', '{sample}_R2_trimmed_unpaired.fq.gz')
 	params:
 		adapters = opts['trimmomatic-adapters-fa'],
-		threads = available_cpu_count()-2
+
+	threads: available_cpu_count()-2
 	shell:
 		"""
 		trimmomatic PE \
-			-threads {params.threads} \
+			-threads {threads} \
 			{input.read1} \
 			{input.read2} \
 			{output.read1_paired} \
