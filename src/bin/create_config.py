@@ -89,3 +89,7 @@ if not os.path.exists(config_file_name):
     fout.write(config_file)
 else:
     print('warning: config file exists, nothing written.')
+
+# todo: consider copying workflows to local dir
+# workflow = 'rnaseq'
+# os.path.join(sys.prefix, 'envs', os.environ['CONDA_DEFAULT_ENV'], 'workflows', workflow + '.smk')
