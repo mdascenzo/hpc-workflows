@@ -3,8 +3,24 @@ import re
 import os
 import natsort
 import collections
-from ruamel import yaml  # conda install -c conda-forge -n rnaseq ruamel.yaml
 import argparse
+import sys
+from ruamel import yaml
+
+
+__version__ = "0.0.1"
+
+usage = """
+create_config.py -f <fasta_files> [options]
+version: {__version__}
+
+options:
+    -o  path for directory name where analysis output will be placed
+    -n  name of configuration file
+
+example usage:
+create_config.py -f seq/*.fa.gz -o analysis
+""".format(**locals())
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', dest='fas', help='path to fastq files', metavar='fq', type=str,  nargs='+')
@@ -14,25 +30,27 @@ parser.add_argument('-n', dest='configfile_name', default='config.yml')
 
 args = parser.parse_args()
 
-# todo: verify input or exit
+# validate input
+if not args.fas:
+    print(usage)
+    sys.exit()
 
+# set default analysis options
 config = collections.OrderedDict()
 config['analysis_name'] = 'rnaseq_analysis'
-
-# analysis options
-config['star'] = 'No'
-config['salmon'] = 'Yes'
-
-config['resources_dir'] = '/Users/mdascenzo/mnt/Precyte1/stage/resources'
+config['star'] = 'no'
+config['salmon'] = 'yes'
+config['trim'] = 'yes'
+config['resources_dir'] = '/Volumes/Precyte1/stage/resources'
 config['build'] = 'hg38'
 config['genome_uid'] = 'hg38dev'
 config['tx_uid'] = 'ensembl_rel83'
-
-# todo: update / sync versions
+config['annotation_gtf'] = 'gencode.v25.primary_assembly.annotation.wERCC92.gtf'
+# todo: update with known location
 config['tx2gene_fp'] =\
-    '/Users/mdascenzo/mnt/Precyte1/stage/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
+    '/Volumes/Precyte1/stage/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
 
-# star options
+# set default star options
 config['star_sj_db_overhang'] = 74
 
 out = args.out
@@ -43,13 +61,15 @@ config['out'] = out
 # make paths absolute if not
 fas = [os.path.abspath(f) for f in args.fas]
 
+# set options parameter and default values
 config['options'] = collections.OrderedDict()
 if args.sim:
     config['options']['salmon-quant-l'] = 'IU'
 
+# configure samples
 config['samples'] = collections.OrderedDict()
 
-# currently assumes paired end reads
+# set reads for each sample, currently assumes paired end reads
 it = iter(natsort.natsorted(fas))
 for x in it:
     paired_reads = (x, next(it))
@@ -59,6 +79,7 @@ for x in it:
     config['samples'][sample_id]['read1'] = paired_reads[0]
     config['samples'][sample_id]['read2'] = paired_reads[1]
 
+# create configuration document
 config_file = yaml.dump(config, Dumper=yaml.RoundTripDumper, default_flow_style=False).replace('!!omap', '').replace('- ', '')
 
 # write config file
@@ -67,4 +88,4 @@ if not os.path.exists(config_file_name):
     fout = open(config_file_name, 'w')
     fout.write(config_file)
 else:
-    print('warning: config file exists.')
+    print('warning: config file exists, nothing written.')
