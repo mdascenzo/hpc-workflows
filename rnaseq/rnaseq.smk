@@ -338,6 +338,8 @@ if opt_star:
 			sj_db_overhang = str(config['star_sj_db_overhang'])
 
 		threads: available_cpu_count()-2
+		resources:
+			mem_mb = 48000
 
 		run:
 			command =\
@@ -383,6 +385,13 @@ if opt_star:
 	#
 	#					- Unsorted output can be directly input into featureCounts
 	#					- Setting threads too high for this process may result in a ulimit error on osx
+	#					- Modification of shared memory settings is required to run LoadAndKeep:
+	#						/etc/sysctl.conf settings:
+	#						"SHMMAX"; echo "16 * 1024^3 / 2" | bc
+	#						"SHMMNI"; echo 4096
+	#						"SHSMALL";  echo "48 * 1024^3 / 4096" | bc
+	#					- sysctl.conf not settable in latest version of osx
+	#
 	rule star_align:
 		input:
 			unpack(star_align_input),
@@ -395,7 +404,8 @@ if opt_star:
 			out_sam_type = 'BAM Unsorted'
 
 		threads: 6
-
+		resources:
+			mem_mb = 48000
 		shell:
 			"""
 			star --runThreadN {threads} \
