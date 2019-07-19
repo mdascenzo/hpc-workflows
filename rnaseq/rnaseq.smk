@@ -18,6 +18,7 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # todo:
 # 	- configuration: further generalize
 # 	- configuration: validate config input to ensure all files exist
+# 	- configuration: add tx2gene_fp to known paths
 # 	- rule.star_align: consider adding read length auto-detect, set sjdbOverhang dynamically
 # 	- rule.star_align: consider adding mixed RL to be run in same analysis, currently assumes the same for all samples
 # 	- rule.star_align: create subdirectory based on GTF file, link or include GTF file with index
@@ -325,9 +326,9 @@ if opt_star:
 			fasta_files = path.join(
 				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa'
 			),
-			annotation_gtf = glob.glob(path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
-			))[0]
+			annotation_gtf = path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+			)
 		output:
 			path = protected(
 				directory(
@@ -433,9 +434,9 @@ if opt_star:
 	rule feature_counts:
 		input:
 			bam = rules.star_align.output.bam,
-			annotation_gtf = glob.glob(path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', '*.gtf'
-			))
+			annotation_gtf = path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+			)
 		output:
 			basename = path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 			summary = path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
