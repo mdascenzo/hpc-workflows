@@ -72,17 +72,17 @@ cd workflows
 conda env create -f env/rnaseq.yml
 ```
 
-###### To use an alternate configuration file:
+#### To use an alternate configuration file:
 ```
 snakemake --configfile <filename.yml> -s rnaseq.smk --cores 8
 ```
 
-###### Updating an existing installation:
+#### Updating an existing installation:
 ```
 conda env update --name rnaseq  -f env/rnaseq.yml
 ```
 
-###### Example config.yml file:
+#### Example config.yml file:
 
 The configuration file contains default settings and should be customized. The create_config.py setup script includes all paired-end fastq.gz files
 under the "samples" sub-section of the YAML document. 
@@ -119,14 +119,14 @@ samples:
 
 Note that configuration settings define paths to resources currently located in /Precyte1/stage/resources.
 
-###### Analysis Workflow Options
+### Analysis Workflow Options
 Example workflow options (v0.0.1). Trim step not currently shown.
 
 ![workflow-full](doc/rnaseq/img/dag_options_3.png)
 
 #### Notes
 
-##### STAR
+#### STAR
 
 Genome Indexing:
 - Configured to utilize a splice junction database.
@@ -141,6 +141,6 @@ Example splice junction db file:
 /Precyte1/stage/refs/genomes/hg38/annotation/hg38wERCC92/gencode.v25.primary_assembly.annotation.wERCC92.gtf
 ```
 
-###### Todo:
+#### Todo:
 - Possibly create installer to move R-code to library path
 - Update genome and transcriptome annotation files
