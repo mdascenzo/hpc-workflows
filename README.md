@@ -33,7 +33,7 @@ ln -s workflows/src/rnaseq/* .
 # create an analysis configuration file using compressed paired-end fastq reads as input
 create_config.py -f path/to/sequence/*fq.gz -o analysis
 
-# examine the newly created config.yml file to customize the analysis (see below). 
+# examine the newly created config.yml file to customize the analysis (see section *Example config.yml file* below). 
 
 # execute workflow using 8 cores
 snakemake -s rnaseq.smk --cores 8
@@ -123,7 +123,7 @@ Example workflow options (v0.0.1). Trim step not currently shown.
 ![workflow-full](doc/rnaseq/img/dag_options_3.png)
 
 #### Notes
-=
+
 ##### STAR
 
 Genome Indexing:
