@@ -124,7 +124,7 @@ Example workflow options (v0.0.1). Trim step not currently shown.
 
 ![workflow-full](doc/rnaseq/img/dag_options_3.png)
 
-#### Notes
+### Notes
 
 #### STAR
 
