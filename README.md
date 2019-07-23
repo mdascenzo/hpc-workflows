@@ -1,11 +1,11 @@
 
 
-#### Cloning the repository:
+### Cloning the repository:
 ```
 git clone https://github.com/
 ```
 
-#### Usage on Aloha:
+### Usage on Aloha:
 
 The environment required to run the rnaseq workflow in this repository is currently installed on Aloha. The example below 
 shows the commands needed to activate this environment (aloha.rnaseq), as well as the basic commands need to setup and 
@@ -18,7 +18,7 @@ export PATH=/usr/local/env/conda/bin:$PATH
 conda init
 ```
 
-Activate rnaseq environment and execute workflow. The environment contains all the dependencies required by the workflow. 
+Activate the rnaseq environment and execute the workflow. The environment contains all the dependencies required by the workflow. 
 ```
 # activate the analysis environment
 conda activate aloha.rnaseq
@@ -40,7 +40,7 @@ create_config.py -f path/to/sequence/*fq.gz -o analysis
 snakemake -s rnaseq.smk --cores 8
 ```
 
-#### Conda Installation on OSX or Linux
+### Conda Installation on OSX or Linux
 
 The commands below can be used to create a new conda environment on either OSX or Linux.
 ```
