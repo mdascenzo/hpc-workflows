@@ -65,7 +65,7 @@ export PATH=$INSTALL_DIR/bin:$PATH
 conda install anaconda-client
 ```
 
-Once Conda is installed, all required dependencies can be installed using the following commands.
+Once conda is installed, all required analysis dependencies can be installed using the following commands.
 ```
 git clone https://github.com/
 cd workflows 
