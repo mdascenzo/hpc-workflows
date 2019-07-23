@@ -1,11 +1,11 @@
 
 
-##### Cloning the repository:
+#### Cloning the repository:
 ```
 git clone https://github.com/
 ```
 
-##### Usage on Aloha:
+#### Usage on Aloha:
 
 The environment required to run workflows in this repository will be maintained on Aloha. No additional installation is needed. The example below 
 shows the commands to activate the rnaseq environment on Aloha, and the basic commands to setup and execute the rnaseq workflow. A brief description 
@@ -39,7 +39,7 @@ create_config.py -f path/to/sequence/*fq.gz -o analysis
 snakemake -s rnaseq.smk --cores 8
 ```
 
-##### Conda Installation on OSX or Linux
+#### Conda Installation on OSX or Linux
 
 The commands below can be used to create a new conda environment on either OSX or Linux.
 ```
