@@ -7,9 +7,10 @@ git clone https://github.com/
 
 #### Usage on Aloha:
 
-The environment required to run workflows in this repository will be maintained on Aloha. No additional installation is needed. The example below 
-shows the commands to activate the rnaseq environment on Aloha, and the basic commands to setup and execute the rnaseq workflow. A brief description 
-of the configuration file and contents can be found later in this document. If using conda on Aloha for the first time, conda must be initialized.
+The environment required to run the rnaseq workflow in this repository is currently installed on Aloha. The example below 
+shows the commands needed to activate this environment (aloha.rnaseq), as well as the basic commands need to setup and 
+execute the rnaseq workflow. A brief description of the configuration file and contents can be found later in this document. 
+If using conda on Aloha for the first time, conda must be initialized as shown below.
 
 One time initialization of conda. This will make an update to your bash_profile.
 ```
