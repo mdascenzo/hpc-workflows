@@ -26,6 +26,7 @@ dependencies:
   - ruamel.yaml=0.15.96
   - yaml=0.1.7
   - natsort=6.0.0
-  #- pip:
-  #   - git+https://github.com/pythonforfacebook/facebook-sdk.git
+  - pip
+  - pip:
+     - git+https://github.com/
 
