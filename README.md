@@ -38,7 +38,7 @@ create_config.py -f path/to/sequence/*fq.gz -o analysis
 # see section: "Example config.yml file" (below) 
 
 # execute the workflow using 8 cores
-nohup snakemake -s rnaseq.smk --cores 8 *> out.log &
+nohup snakemake -s rnaseq.smk --cores 8 &> out.log &
 ```
 
 ### Conda Installation on OSX or Linux
