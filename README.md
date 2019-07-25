@@ -8,8 +8,8 @@ git clone https://github.com/
 ### Usage on Aloha:
 
 The environment required to run the rnaseq workflow in this repository is currently installed on Aloha. The example below 
-shows the commands needed to activate this environment (aloha.rnaseq), as well as the basic commands need to setup and 
-execute the rnaseq workflow. A brief description of the configuration file and contents can be found later in this document. 
+shows the commands needed to activate this environment (aloha.rnaseq), as well as the basic commands needed to setup and 
+execute the workflow. A brief description of the configuration file and contents can be found later in this document. 
 If using conda on Aloha for the first time, conda must be initialized as shown below.
 
 One time initialization of conda. This will make an update to your bash_profile.
@@ -18,7 +18,7 @@ export PATH=/usr/local/env/conda/bin:$PATH
 conda init
 ```
 
-Activate the rnaseq environment and execute the workflow. The environment contains all the dependencies required by the workflow. 
+Activate the rnaseq environment and execute the workflow. The conda environment contains all the dependencies required by the workflow. 
 ```
 # activate the analysis environment
 conda activate aloha.rnaseq
@@ -37,8 +37,8 @@ create_config.py -f path/to/sequence/*fq.gz -o analysis
 # examine the newly created config.yml file to customize the analysis
 # see section: "Example config.yml file" (below) 
 
-# execute workflow using 8 cores
-snakemake -s rnaseq.smk --cores 8
+# execute the workflow using 8 cores
+nohup snakemake -s rnaseq.smk --cores 8 *> out.log &
 ```
 
 ### Conda Installation on OSX or Linux
@@ -55,10 +55,10 @@ curl https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -o Mi
 # for osx
 curl https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -o Miniconda3-latest-MacOSX-x86_64.sh
 
-# execute installer including desire install location (-p PREFIX):
+# execute installer with specified install location (-p PREFIX):
 sh Miniconda3-3.7.0-Linux-x86_64.sh -p $INSTALL_PATH
  
-# update path to include the newly created conda install location (e.g. /usr/local/env/conda) 
+# update PATH to include the newly created conda install location (e.g. /usr/local/env/conda) 
 export PATH=$INSTALL_DIR/bin:$PATH
 
 # install anaconda client
@@ -126,6 +126,15 @@ Example workflow options (v0.0.1). Trim step not currently shown.
 
 ### Notes
 
+### Resources:
+
+The analysis resources directory (resource_dir) contains alignment and annotation files required by the analysis. 
+Currently this is located on
+```
+/Precyte1/stage/resources
+``` 
+The mount path may vary between user or machine and may require manual configuration within the config.yml file.
+
 #### STAR
 
 Genome Indexing:
@@ -140,6 +149,8 @@ Example splice junction db file:
 ```
 /Precyte1/stage/refs/genomes/hg38/annotation/hg38wERCC92/gencode.v25.primary_assembly.annotation.wERCC92.gtf
 ```
+
+
 
 #### Todo:
 - Possibly create installer to move R-code to library path
