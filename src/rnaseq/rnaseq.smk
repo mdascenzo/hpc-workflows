@@ -2,8 +2,7 @@
 import os, sys
 import glob
 from os import path
-from snakemake.io import protected, expand, unpack
-from snakemake.io import directory
+from snakemake.io import protected, expand, unpack, directory, ancient
 from snakemake import shell, rules
 from snakemake.utils import R
 from snakemake.utils import update_config, available_cpu_count
@@ -323,11 +322,15 @@ if opt_star:
 	#
 	rule star_index:
 		input:
-			fasta_files = path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa'
+			fasta_files = ancient(
+				path.join(
+					config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa'
+				)
 			),
-			annotation_gtf = path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+			annotation_gtf = ancient(
+				path.join(
+					config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+				)
 			)
 		output:
 			path = protected(
@@ -348,7 +351,7 @@ if opt_star:
 			# add optional parameters
 			if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 				command += ' --sjdbGTFfile ' + input.annotation_gtf
-				command += ' --sjdbOverhang ' + params.sj_db_overhang
+				command += ' --sjdbOverhang ' + params.sj_db_overhangll
 
 			shell(command)
 
