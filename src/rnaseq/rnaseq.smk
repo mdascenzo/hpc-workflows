@@ -2,8 +2,7 @@
 import os, sys
 import glob
 from os import path
-from snakemake.io import protected, expand, unpack
-from snakemake.io import directory
+from snakemake.io import protected, expand, unpack, directory, ancient
 from snakemake import shell, rules
 from snakemake.utils import R
 from snakemake.utils import update_config, available_cpu_count
@@ -112,7 +111,8 @@ rule all:
 			expand(
 				path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 				sample=SAMPLES
-			)
+			),
+			path.join(config['out'], "feature_counts.txt")
 
 		) if opt_star else ()
 
@@ -153,7 +153,7 @@ rule trim_reads:
 	params:
 		adapters = opts['trimmomatic-adapters-fa'],
 
-	threads: available_cpu_count()-2
+	threads: available_cpu_count()
 	shell:
 		"""
 		trimmomatic PE \
@@ -165,7 +165,7 @@ rule trim_reads:
 			{output.read2_paired} \
 			{output.read2_unpaired} \
 			ILLUMINACLIP:{params.adapters}:2:30:10:2:TRUE \
-			MINLEN:25			
+			MINLEN:25
 		"""
 
 
@@ -195,7 +195,7 @@ if opt_salmon:
 			)
 		log: 'salmon/salmon_index.log'
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 
 		shell:
 			"""
@@ -240,7 +240,7 @@ if opt_salmon:
 			l = opts['salmon-quant-l']
 		log: set_log('salmon/{sample}/stdout.log')
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 
 		run:
 			output_dir = os.path.dirname(output[0])
@@ -289,20 +289,20 @@ if opt_salmon:
 			# noinspection RUnresolvedReference
 			R("""
 			source('./R/rnaseq_tools.R')
-					
+
 			# create R variables
-			salmon_quant_analysis_dir <- "{params.salmon_quant_analysis_dir}" 
+			salmon_quant_analysis_dir <- "{params.salmon_quant_analysis_dir}"
 			sample_ids <- unlist(strsplit("{params.sample_ids}", " "))
 			tx2gene_fp = "{input.tx2gene_fp}"
 			basename = "{params.basename}"
 			path = "{params.path}"
-			
+
 			# call rnaseq_tools::tximport.salmon()
 			txi_salmon = tximport.salmon(salmon_quant_analysis_dir, sample_ids, tx2gene_fp)
-			
+
 			# save tx data to file
 			write.txi(txi_salmon, basename=basename, path=path)
-			
+
 			""")
 
 
@@ -323,11 +323,15 @@ if opt_star:
 	#
 	rule star_index:
 		input:
-			fasta_files = path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa'
+			fasta_files = ancient(
+				path.join(
+					config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'fa'
+				)
 			),
-			annotation_gtf = path.join(
-				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+			annotation_gtf = ancient(
+				path.join(
+					config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+				)
 			)
 		output:
 			path = protected(
@@ -338,7 +342,7 @@ if opt_star:
 		params:
 			sj_db_overhang = str(config['star_sj_db_overhang'])
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 		resources:
 			mem_mb = 48000
 
@@ -348,7 +352,7 @@ if opt_star:
 			# add optional parameters
 			if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 				command += ' --sjdbGTFfile ' + input.annotation_gtf
-				command += ' --sjdbOverhang ' + params.sj_db_overhang
+				command += ' --sjdbOverhang ' + params.sj_db_overhangll
 
 			shell(command)
 
@@ -404,7 +408,7 @@ if opt_star:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted'
 
-		threads: 6
+		threads: available_cpu_count() #6
 		resources:
 			mem_mb = 48000
 		shell:
@@ -443,13 +447,44 @@ if opt_star:
 		params:
 			strandedness = 2
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 
 		shell:
 			"""
 			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
 			"""
 
+	# rule.merge_feature_counts
+	#
+
+	rule merge_feature_counts:
+		input:
+			fc_files = expand(
+							path.join(config['out'], 'star/{sample}/feature_counts.txt'),
+							sample=SAMPLES
+						)
+		output:
+			fc = path.join(config['out'], "feature_counts.txt")
+
+		params:
+			path = config['out'],
+			sample_ids = SAMPLE_IDS
+
+		run:
+			R("""
+			source('./R/rnaseq_tools.R')
+
+			# create R variables
+			sample_ids <- unlist(strsplit("{params.sample_ids}", " "))
+			path <– "{params.path}"
+			fc_files <- file.path(path, "star", sample_ids, "feature_counts.txt")
+
+			# call mergeFeatureCounts()
+			fcm <- mergeFeatureCounts(fc_files, sample_ids)
+
+			# write to HDD
+			fwrite(fcm, file = file.path(path, "feature_counts.txt"))
+			""")
 
 def fastqc_input(w):
 	"""
