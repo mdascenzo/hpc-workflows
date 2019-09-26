@@ -112,7 +112,7 @@ rule all:
 				path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 				sample=SAMPLES
 			),
-			path.join(config['out'], "feature_counts.txt")
+			path.join(config['out'], "feature_counts.csv")
 
 		) if opt_star else ()
 
@@ -464,7 +464,7 @@ if opt_star:
 							sample=SAMPLES
 						)
 		output:
-			fc = path.join(config['out'], "feature_counts.txt")
+			fc = path.join(config['out'], "feature_counts.csv")
 
 		params:
 			path = config['out'],
@@ -475,15 +475,16 @@ if opt_star:
 			source('./R/rnaseq_tools.R')
 
 			# create R variables
-			sample_ids <- unlist(strsplit("{params.sample_ids}", " "))
-			path <– "{params.path}"
-			fc_files <- file.path(path, "star", sample_ids, "feature_counts.txt")
+			sample_ids = unlist(strsplit("{params.sample_ids}", " "))
+			path = "{params.path}"
+			fc_files = file.path(path, "star", sample_ids, "feature_counts.txt")
 
 			# call mergeFeatureCounts()
-			fcm <- mergeFeatureCounts(fc_files, sample_ids)
+			fcm = mergeFeatureCounts(fc_files, sample_ids)
+			#fcm = data.frame(x=1:10,y=letters[1:10])
 
 			# write to HDD
-			fwrite(fcm, file = file.path(path, "feature_counts.txt"))
+			write.csv(fcm, file = file.path(path, "feature_counts.csv"))
 			""")
 
 def fastqc_input(w):
