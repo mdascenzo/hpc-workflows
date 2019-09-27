@@ -477,7 +477,7 @@ if opt_star:
 			# create R variables
 			sample_ids = unlist(strsplit("{params.sample_ids}", " "))
 			path = "{params.path}"
-			fc_files = file.path(path, "star", sample_ids, "feature_counts.csv")
+			fc_files = file.path(path, "star", sample_ids, "feature_counts.txt")
 
 			# call mergeFeatureCounts()
 			fcm = mergeFeatureCounts(fc_files, sample_ids)
