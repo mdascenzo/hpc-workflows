@@ -111,7 +111,8 @@ rule all:
 			expand(
 				path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 				sample=SAMPLES
-			)
+			),
+			path.join(config['out'], "feature_counts.csv")
 
 		) if opt_star else ()
 
@@ -152,7 +153,7 @@ rule trim_reads:
 	params:
 		adapters = opts['trimmomatic-adapters-fa'],
 
-	threads: available_cpu_count()-2
+	threads: available_cpu_count()
 	shell:
 		"""
 		trimmomatic PE \
@@ -164,7 +165,7 @@ rule trim_reads:
 			{output.read2_paired} \
 			{output.read2_unpaired} \
 			ILLUMINACLIP:{params.adapters}:2:30:10:2:TRUE \
-			MINLEN:25			
+			MINLEN:25
 		"""
 
 
@@ -194,7 +195,7 @@ if opt_salmon:
 			)
 		log: 'salmon/salmon_index.log'
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 
 		shell:
 			"""
@@ -239,7 +240,7 @@ if opt_salmon:
 			l = opts['salmon-quant-l']
 		log: set_log('salmon/{sample}/stdout.log')
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 
 		run:
 			output_dir = os.path.dirname(output[0])
@@ -288,20 +289,20 @@ if opt_salmon:
 			# noinspection RUnresolvedReference
 			R("""
 			source('./R/rnaseq_tools.R')
-					
+
 			# create R variables
-			salmon_quant_analysis_dir <- "{params.salmon_quant_analysis_dir}" 
+			salmon_quant_analysis_dir <- "{params.salmon_quant_analysis_dir}"
 			sample_ids <- unlist(strsplit("{params.sample_ids}", " "))
 			tx2gene_fp = "{input.tx2gene_fp}"
 			basename = "{params.basename}"
 			path = "{params.path}"
-			
+
 			# call rnaseq_tools::tximport.salmon()
 			txi_salmon = tximport.salmon(salmon_quant_analysis_dir, sample_ids, tx2gene_fp)
-			
+
 			# save tx data to file
 			write.txi(txi_salmon, basename=basename, path=path)
-			
+
 			""")
 
 
@@ -341,7 +342,7 @@ if opt_star:
 		params:
 			sj_db_overhang = str(config['star_sj_db_overhang'])
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 		resources:
 			mem_mb = 48000
 
@@ -407,7 +408,7 @@ if opt_star:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted'
 
-		threads: 6
+		threads: available_cpu_count() #6
 		resources:
 			mem_mb = 48000
 		shell:
@@ -446,13 +447,45 @@ if opt_star:
 		params:
 			strandedness = 2
 
-		threads: available_cpu_count()-2
+		threads: available_cpu_count()
 
 		shell:
 			"""
 			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
 			"""
 
+	# rule.merge_feature_counts
+	#
+
+	rule merge_feature_counts:
+		input:
+			fc_files = expand(
+							path.join(config['out'], 'star/{sample}/feature_counts.txt'),
+							sample=SAMPLES
+						)
+		output:
+			fc = path.join(config['out'], "feature_counts.csv")
+
+		params:
+			path = config['out'],
+			sample_ids = SAMPLE_IDS
+
+		run:
+			R("""
+			source('./R/rnaseq_tools.R')
+
+			# create R variables
+			sample_ids = unlist(strsplit("{params.sample_ids}", " "))
+			path = "{params.path}"
+			fc_files = file.path(path, "star", sample_ids, "feature_counts.txt")
+
+			# call mergeFeatureCounts()
+			fcm = mergeFeatureCounts(fc_files, sample_ids)
+			#fcm = data.frame(x=1:10,y=letters[1:10])
+
+			# write to HDD
+			write.csv(fcm, file = file.path(path, "feature_counts.csv"))
+			""")
 
 def fastqc_input(w):
 	"""
