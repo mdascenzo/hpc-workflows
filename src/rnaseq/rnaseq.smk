@@ -477,11 +477,10 @@ if opt_star:
 			# create R variables
 			sample_ids = unlist(strsplit("{params.sample_ids}", " "))
 			path = "{params.path}"
-			fc_files = file.path(path, "star", sample_ids, "feature_counts.txt")
+			fc_files = file.path(path, "star", sample_ids, "feature_counts.csv")
 
 			# call mergeFeatureCounts()
 			fcm = mergeFeatureCounts(fc_files, sample_ids)
-			#fcm = data.frame(x=1:10,y=letters[1:10])
 
 			# write to HDD
 			write.csv(fcm, file = file.path(path, "feature_counts.csv"))
