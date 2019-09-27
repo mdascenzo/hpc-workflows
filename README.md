@@ -2,7 +2,7 @@
 
 ### Cloning the repository:
 ```
-git clone https://github.com/
+git clone https://github.com//workflows.git
 ```
 
 ### Usage on Aloha:
@@ -28,7 +28,7 @@ mkdir example_analysis
 
 # download the rnaseq workflow within the analysis directory and link the workflow file (rnaseq.smk) and R directory 
 cd example_analysis
-git clone https://github.com/
+git clone https://github.com//workflows.git
 ln -s workflows/src/rnaseq/* .
 
 # create an analysis configuration file using compressed paired-end fastq reads as input
@@ -67,7 +67,7 @@ conda install anaconda-client
 
 Once conda is installed, all required analysis dependencies can be installed using the following commands.
 ```
-git clone https://github.com/
+git clone https://github.com//workflows.git
 cd workflows 
 conda env create -f env/rnaseq.yml
 ```
@@ -129,7 +129,7 @@ Example workflow options (v0.0.1). Trim step not currently shown.
 ### Resources:
 
 The analysis resources directory (resource_dir) contains alignment and annotation files required by the analysis. 
-Currently this is located on
+Currently this is located on1:
 ```
 /Precyte1/stage/resources
 ``` 
