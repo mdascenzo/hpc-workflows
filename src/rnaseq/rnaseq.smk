@@ -695,7 +695,7 @@ rule multiqc:
 	output:
 		path.join(config['out'], "multiqc_report.html")
 	params:
-		'-m fastqc -m salmon -m star -m featureCounts --config ' + path.join(config['out'], 'multiqc_config.yaml') + '-o ' + config['out']
+		'-m fastqc -m salmon -m star -m featureCounts --config ' + path.join(config['out'], 'multiqc_config.yaml') + ' -o ' + config['out']
 	shell:
 		"""
 		multiqc {params} {input}
