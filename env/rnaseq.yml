@@ -28,5 +28,5 @@ dependencies:
   - natsort=6.0.0
   - pip
   - pip:
-     - git+https://github.com//workflows.git
+     - git+https://github.com/
 
