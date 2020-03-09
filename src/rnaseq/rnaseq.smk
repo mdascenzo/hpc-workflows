@@ -1,6 +1,7 @@
 # vi:syntax=python
 import os, sys
 import glob
+import re
 from os import path
 from snakemake.io import protected, expand, unpack, directory, ancient
 from snakemake import shell, rules
@@ -22,7 +23,7 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # 	- rule.star_align: consider adding mixed RL to be run in same analysis, currently assumes the same for all samples
 # 	- rule.star_align: create subdirectory based on GTF file, link or include GTF file with index
 
-__VERSION__ = "0.0.1"
+__VERSION__ = "0.1.0"
 
 # ---------------
 # Configuration
@@ -57,14 +58,13 @@ if 'options' in config:
 if not os.path.isabs(opts['trimmomatic-adapters-fa']):
 	opts['trimmomatic-adapters-fa'] = os.path.abspath(
 		os.path.join(
-			os.popen("echo `which trimmomatic`").read().rstrip(),
-			'../../share/trimmomatic/adapters',
+			'/usr/local/sw/Trimmomatic-0.39/adapters',
 			opts['trimmomatic-adapters-fa']
 		)
 	)
 
 # record versions of aligners used for index building purposes
-star_version = os.popen("echo `star --version`").read().rstrip()
+star_version = os.popen("echo `STAR --version`").read().rstrip()
 salmon_version = os.popen("echo `salmon --version`").read().rstrip().split(' ')[1]
 
 # location of salmon index directory
@@ -80,9 +80,36 @@ star_index_location =\
 		config['genome_uid'], 'indexes/star', star_version + '_sjo' + str(config['star_sj_db_overhang'])
 	) + '/'
 
+# ------
+# General Function
+# ------
 
 def set_log(name):
 	return os.path.join(config['out'], name)
+
+def parse_contigs(fp, fp_out, min_coverage=10000):
+
+	high_coverage_contigs=[]
+
+	f=open(fp)
+	for i in f:
+		if re.search('^>', i):
+			seq=''
+			v = i.split('_')
+			(uid, length, coverage) = v[1], v[3], float(v[5].rstrip())
+		else:
+			seq = seq + i.replace('\n', '')
+			if ( coverage > min_coverage):
+				high_coverage_contigs.append((uid, length, coverage, seq))
+
+	with open(fp_out, 'w') as fout:
+		fout.write('#total_reads:' + str(sum([i[2] for i in high_coverage_contigs])) +
+			' min_coverage:' + str(min_coverage) +
+			' num_contigs:' + str(len(high_coverage_contigs)) + '\n')
+		for entry in sorted(high_coverage_contigs, key=lambda v: v[2], reverse=True):
+			fout.write('_'.join(['>contig', entry[0], 'length', entry[1], 'depth',
+				str(entry[2])]) + '\n' + entry[3] + '\n'
+			)
 
 # ------------------------------
 # Workflow Rules and Functions
@@ -110,6 +137,14 @@ rule all:
 			# featureCounts
 			expand(
 				path.join(config['out'], 'star/{sample}/feature_counts.txt'),
+				sample=SAMPLES
+			),
+			expand(
+				path.join(config['out'], 'spades/{sample}/first_pe_contigs.fasta'),
+				sample=SAMPLES
+			),
+			expand(
+				path.join(config['out'], 'spades/{sample}/high_depth_contigs.fasta'),
 				sample=SAMPLES
 			),
 			path.join(config['out'], "feature_counts.csv")
@@ -142,6 +177,7 @@ def trim_reads_input(w):
 # 	Reference: 		Bolger, A.M., Lohse, M., Usadel, B., 2014. Trimmomatic: a flexible trimmer for Illumina sequence data.
 # 					Bioinformatics 30, 2114–2120. https://doi.org/10.1093/bioinformatics/btu170
 #
+# todo: explore alternate trimmers: bbduk, ?
 rule trim_reads:
 	input:
 		unpack(trim_reads_input)
@@ -156,7 +192,7 @@ rule trim_reads:
 	threads: available_cpu_count()
 	shell:
 		"""
-		trimmomatic PE \
+		java -Xms128m -Xmx4g -jar /usr/local/sw/Trimmomatic-0.39/trimmomatic-0.39.jar PE \
 			-threads {threads} \
 			{input.read1} \
 			{input.read2} \
@@ -348,11 +384,11 @@ if opt_star:
 
 		run:
 			command =\
-			"star --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
+			"STAR --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
 			# add optional parameters
 			if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 				command += ' --sjdbGTFfile ' + input.annotation_gtf
-				command += ' --sjdbOverhang ' + params.sj_db_overhangll
+				command += ' --sjdbOverhang ' + params.sj_db_overhang
 
 			shell(command)
 
@@ -403,23 +439,34 @@ if opt_star:
 			star_genome_dir = rules.star_index.output.path
 		output:
 			bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
-			count_file = path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab')
+			count_file = path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab'),
+			r1_unmapped_reads = path.join(config['out'], 'star/{sample}/Unmapped.out.mate1.fq'),
+			r2_unmapped_reads = path.join(config['out'], 'star/{sample}/Unmapped.out.mate2.fq')
 		params:
+			output_dir = path.join(config['out'], 'star/{sample}'),
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted'
 
-		threads: available_cpu_count() #6
+		threads: 2
 		resources:
 			mem_mb = 48000
 		shell:
 			"""
-			star --runThreadN {threads} \
+			STAR --runThreadN {threads} \
 				 --genomeDir {input.star_genome_dir} \
-				 --readFilesIn <(gunzip -c {input.read1}) <(gunzip -c {input.read2}) \
+				 --genomeLoad LoadAndKeep \
+				 --readFilesIn <(pigz -dc {input.read1}) <(pigz -dc {input.read2}) \
 				 --outFileNamePrefix  $(dirname {output.bam})/ \
 				 --quantMode {params.quant_mode} \
-				 --outSAMtype {params.out_sam_type}
+				 --outSAMtype {params.out_sam_type} \
+                 --outReadsUnmapped Fastx
+			mv {params.output_dir}/Unmapped.out.mate1 {output.r1_unmapped_reads}
+			mv {params.output_dir}/Unmapped.out.mate2 {output.r2_unmapped_reads}
 			"""
+
+				 #--readFilesCommand pigz -dc \
+ 				 #--readFilesIn <(gunzip -c {input.read1}) <(gunzip -c {input.read2}) \
+
 
 	# rule.feature_counts
 	#
@@ -485,6 +532,72 @@ if opt_star:
 			# write to HDD
 			write.csv(fcm, file = file.path(path, "feature_counts.csv"))
 			""")
+
+	# rule.denovo_assemble_offtarget_reads
+	#
+	#	Description: 	Assemble off target reads
+	#
+	# 	Reference:		metaSPAdes: a new versatile metagenomic assembler.
+	#					https://www.ncbi.nlm.nih.gov/pubmed/28298430
+	#	Documentation:
+	#
+	#	Notes:
+	#
+	rule denovo_assemble_offtarget_reads:
+		input:
+			r1_unmapped_reads = rules.star_align.output.r1_unmapped_reads,
+			r2_unmapped_reads = rules.star_align.output.r2_unmapped_reads
+		output:
+			first_pe_contigs_fasta = path.join(config['out'], 'spades/{sample}/first_pe_contigs.fasta')
+		params:
+			strandedness = 2,
+			directory = path.join(config['out'], 'spades/{sample}')
+
+		threads: available_cpu_count()
+
+		shell:
+			"""
+			spades.py \
+			  --meta --only-assembler --threads {threads} \
+			  -1 {input.r1_unmapped_reads} \
+			  -2 {input.r2_unmapped_reads} \
+			  -o {params.directory}
+			"""
+
+	rule process_denovo_assembled_contigs:
+		input:
+			fa = rules.denovo_assemble_offtarget_reads.output.first_pe_contigs_fasta
+		output:
+			hdfa = path.join(config['out'], 'spades/{sample}/high_depth_contigs.fasta')
+		params:
+			min_coverage=10000
+		run:
+			parse_contigs(input.fa, output.hdfa, params.min_coverage)
+
+		#./bin/kaiju -t dbs/nodes.dmp -f dbs/rvdb/kaiju_db_rvdb.fmi -i /home/ -o /home/
+
+	# todo add rule
+	# rule map_off_target_reads:
+	# 	input:
+	# 		r1_unmapped_reads = rules.star_align.output.r1_unmapped_reads,
+	# 		r2_unmapped_reads = rules.star_align.output.r2_unmapped_reads
+	# 	output:
+	# 		viral_analysis_alignment_summary:
+	# 	params:
+	# 		sample_id:
+	# 	shell:
+	# 		"""
+	# 		# bwa
+	# 		bwa mem genomes/viruses/viruses.v1.1.fa WB-1044497_unmapped_mate1.fq WB-1044497_unmapped_mate2.fq > WB-1044497_virus_analysis.sam
+	# 		# process bam
+	# 		samtools view -S -b WB-1044497_virus_analysis.sam > WB-1044497_virus_analysis.bam
+	# 		samtools view -h -b -F4 WB-1044497_virus_analysis.bam >  WB-1044497_virus_analysis_aligned.bam
+	# 		samtools sort WB-1044497_virus_analysis_aligned.bam > WB-1044497_virus_analysis_aligned_sort.bam
+	# 		samtools index WB-1044497_virus_analysis_aligned_sort.bam
+	# 		samtools flagstat WB-1044497_virus_analysis_aligned_sort.bam > WB-1044497_virus_analysis_aligned_sort.flg
+	# 		# count top matches
+	# 		samtools view {input.viral_analysis_bam} | cut -f 3 | sort | uniq -c | sort -nr > {output.viral_analysis_alignment_summary}
+	# 		"""
 
 def fastqc_input(w):
 	"""
@@ -584,6 +697,8 @@ rule multiqc:
 	output:
 		path.join(config['out'], "multiqc_report.html")
 	params:
-		'-m fastqc -m salmon -m star -m featureCounts --config ' + path.join(config['out'], 'multiqc_config.yaml')
-	wrapper:
-		"0.35.0/bio/multiqc"
+		'-m fastqc -m salmon -m star -m featureCounts --config ' + path.join(config['out'], 'multiqc_config.yaml') + '-o ' + config['out']
+	shell:
+		"""
+		multiqc {params} {input}
+		"""
