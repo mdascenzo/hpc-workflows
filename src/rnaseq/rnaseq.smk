@@ -574,8 +574,6 @@ if opt_star:
 		run:
 			parse_contigs(input.fa, output.hdfa, params.min_coverage)
 
-		#./bin/kaiju -t dbs/nodes.dmp -f dbs/rvdb/kaiju_db_rvdb.fmi -i /home/ -o /home/
-
 	# todo add rule
 	# rule map_off_target_reads:
 	# 	input:
