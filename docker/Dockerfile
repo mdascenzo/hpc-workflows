@@ -17,8 +17,8 @@ RUN mkdir /usr/local/sw && \
     mkdir /tmp/build && \
     cd /tmp/build && \
     wget https://repo.continuum.io/miniconda/Miniconda3-4.7.12.1-Linux-x86_64.sh -O miniconda.sh && \
-    sh miniconda.sh -b -p /usr/local/env/conda && \
-    conda install -y pandas
+    sh miniconda.sh -b -p /usr/local/env/conda
+
 
 # setup paths
 ENV PATH="/usr/local/env/conda/bin:${PATH}"
@@ -29,6 +29,9 @@ RUN echo "alias ll='ls -l'" >>  ~/.bashrc
 # install anconda
 RUN conda init && \
     conda install -y anaconda-client
+
+# install python packages
+RUN conda install -y pandas
 
 # R 3.5.2 and required libraries
 #RUN apt-get qinstall -y r-base=3.5.2-1 && \
