@@ -19,7 +19,6 @@ RUN mkdir /usr/local/sw && \
     wget https://repo.continuum.io/miniconda/Miniconda3-4.7.12.1-Linux-x86_64.sh -O miniconda.sh && \
     sh miniconda.sh -b -p /usr/local/env/conda
 
-
 # setup paths
 ENV PATH="/usr/local/env/conda/bin:${PATH}"
 
@@ -41,8 +40,9 @@ RUN conda install -y pandas
 RUN conda install -y -c r r-base=3.6.1 r-tidyverse=1.2.1&& \
     conda install -y -c conda-forge r-rlist=0.4.6.1 && \
     R -e "install.packages('BiocManager', repos = 'https://cloud.r-project.org', quiet=FALSE, verbose=TRUE)" && \
-    R -e "BiocManager::install(c('DESeq2', 'tximport'))"  && \
-    conda install -y rpy2
+    R -e "BiocManager::install(c('DESeq2', 'tximport', 'dupRadar'))"  && \
+    conda install -y rpy2 && \
+    conda install -y -c r r-kernsmooth
 
 # STAR
 RUN cd /tmp/build && \
