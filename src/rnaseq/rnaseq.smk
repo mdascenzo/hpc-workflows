@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # 	- rule.star_align: consider adding mixed RL to be run in same analysis, currently assumes the same for all samples
 # 	- rule.star_align: create subdirectory based on GTF file, link or include GTF file with index
 
-__VERSION__ = "0.1.0"
+__VERSION__ = "0.1.1"
 
 # ---------------
 # Configuration
@@ -115,6 +115,8 @@ def parse_contigs(fp, fp_out, min_coverage=10000):
 # Workflow Rules and Functions
 # ------------------------------
 
+report: "report/workflow.rst"
+
 rule all:
 	input:
 		# include fastqc
@@ -139,14 +141,21 @@ rule all:
 				path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 				sample=SAMPLES
 			),
-			expand(
-				path.join(config['out'], 'spades/{sample}/first_pe_contigs.fasta'),
-				sample=SAMPLES
-			),
-			expand(
-				path.join(config['out'], 'spades/{sample}/high_depth_contigs.fasta'),
-				sample=SAMPLES
-			),
+			# expand(
+			# 	path.join(config['out'], 'spades/{sample}/first_pe_contigs.fasta'),
+			# 	sample=SAMPLES
+			# ),
+			# expand(
+			# 	path.join(config['out'], 'spades/{sample}/high_depth_contigs.fasta'),
+			# 	sample=SAMPLES
+			# ),
+			# process_star_alignments
+			expand(path.join(config['out'], 'bam/{sample}_sorted.bam'), sample=SAMPLES),
+			expand(path.join(config['out'], 'bam/{sample}_dupmkd.bam'), sample=SAMPLES),
+			expand(path.join(config['out'], 'qc/{sample}_dupmkd.txt'), sample=SAMPLES),
+			expand(path.join(config['out'], 'qc/{sample}_lib_complx.txt'), sample=SAMPLES),
+			expand(path.join(config['out'], 'qc/{sample}_duprate_exp_dens_plot.jpg'), sample=SAMPLES),
+			# feature counts
 			path.join(config['out'], "feature_counts.csv")
 
 		) if opt_star else ()
@@ -189,10 +198,10 @@ rule trim_reads:
 	params:
 		adapters = opts['trimmomatic-adapters-fa'],
 
-	threads: available_cpu_count()
+	threads: 4
 	shell:
 		"""
-		java -Xms128m -Xmx4g -jar /usr/local/sw/Trimmomatic-0.39/trimmomatic-0.39.jar PE \
+		java -Xms128m -Xmx16g -jar /usr/local/sw/Trimmomatic-0.39/trimmomatic-0.39.jar PE \
 			-threads {threads} \
 			{input.read1} \
 			{input.read2} \
@@ -447,7 +456,7 @@ if opt_star:
 			quant_mode = 'TranscriptomeSAM GeneCounts',
 			out_sam_type = 'BAM Unsorted'
 
-		threads: 2
+		threads: 8
 		resources:
 			mem_mb = 48000
 		shell:
@@ -464,9 +473,47 @@ if opt_star:
 			mv {params.output_dir}/Unmapped.out.mate2 {output.r2_unmapped_reads}
 			"""
 
-				 #--readFilesCommand pigz -dc \
- 				 #--readFilesIn <(gunzip -c {input.read1}) <(gunzip -c {input.read2}) \
 
+	rule process_star_alignments:
+		input:
+			bam = rules.star_align.output.bam
+		output:
+			bam_sorted = path.join(config['out'], 'bam/{sample}_sorted.bam'),
+			bam_dupmkd = path.join(config['out'], 'bam/{sample}_dupmkd.bam'),
+			txt_dupmkd = path.join(config['out'], 'qc/{sample}_dupmkd.txt'),
+			lib_complx = path.join(config['out'], 'qc/{sample}_lib_complx.txt')
+		threads: 4
+		shell:
+			"""
+			samtools sort -@ {threads} -o {output.bam_sorted} {input.bam}
+			samtools index -@ {threads} {output.bam_sorted}
+			java -jar /usr/local/sw/picard.jar MarkDuplicates \
+				I={output.bam_sorted} \
+				O={output.bam_dupmkd} \
+				M={output.txt_dupmkd}
+			java -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
+				I={output.bam_sorted} \
+				O={output.lib_complx}
+			"""
+
+
+	rule qc_duplicates:
+		input:
+			bam_dupmkd = rules.process_star_alignments.output.bam_dupmkd,
+			annotation_gtf = path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+			)
+		output:
+			plot1 = path.join(config['out'], 'qc/{sample}_duprate_exp_dens_plot.jpg')
+		threads: 4
+		run:
+			R("""
+			library(dupRadar)
+			dm = analyzeDuprates("{input.bam_dupmkd}", "{input.annotation_gtf}", stranded=2, paired=T, threads = {threads})
+			jpeg(filename="{output.plot1}", height=480, width=480)
+			duprateExpDensPlot(DupMat=dm)
+			dev.off()
+			""")
 
 	# rule.feature_counts
 	#
@@ -494,7 +541,7 @@ if opt_star:
 		params:
 			strandedness = 2
 
-		threads: available_cpu_count()
+		threads: 8
 
 		shell:
 			"""
@@ -533,6 +580,10 @@ if opt_star:
 			write.csv(fcm, file = file.path(path, "feature_counts.csv"))
 			""")
 
+	#rule qc_duplicates
+	# sort bam output (possibly from salmon)
+	# java -jar /usr/local/sw/picard.jar MarkDuplicates I=Aligned.out.sort.bam O=Aligned.out.dupsmkd.bam M=Aligned.out.dupsmkd.txt
+
 	# rule.denovo_assemble_offtarget_reads
 	#
 	#	Description: 	Assemble off target reads
@@ -543,59 +594,38 @@ if opt_star:
 	#
 	#	Notes:
 	#
-	rule denovo_assemble_offtarget_reads:
-		input:
-			r1_unmapped_reads = rules.star_align.output.r1_unmapped_reads,
-			r2_unmapped_reads = rules.star_align.output.r2_unmapped_reads
-		output:
-			first_pe_contigs_fasta = path.join(config['out'], 'spades/{sample}/first_pe_contigs.fasta')
-		params:
-			strandedness = 2,
-			directory = path.join(config['out'], 'spades/{sample}')
-
-		threads: available_cpu_count()
-
-		shell:
-			"""
-			spades.py \
-			  --meta --only-assembler --threads {threads} \
-			  -1 {input.r1_unmapped_reads} \
-			  -2 {input.r2_unmapped_reads} \
-			  -o {params.directory}
-			"""
-
-	rule process_denovo_assembled_contigs:
-		input:
-			fa = rules.denovo_assemble_offtarget_reads.output.first_pe_contigs_fasta
-		output:
-			hdfa = path.join(config['out'], 'spades/{sample}/high_depth_contigs.fasta')
-		params:
-			min_coverage=10000
-		run:
-			parse_contigs(input.fa, output.hdfa, params.min_coverage)
-
-	# todo add rule
-	# rule map_off_target_reads:
+	# rule denovo_assemble_offtarget_reads:
 	# 	input:
 	# 		r1_unmapped_reads = rules.star_align.output.r1_unmapped_reads,
 	# 		r2_unmapped_reads = rules.star_align.output.r2_unmapped_reads
 	# 	output:
-	# 		viral_analysis_alignment_summary:
+	# 		first_pe_contigs_fasta = path.join(config['out'], 'spades/{sample}/first_pe_contigs.fasta')
 	# 	params:
-	# 		sample_id:
+	# 		strandedness = 2,
+	# 		directory = path.join(config['out'], 'spades/{sample}')
+	#
+	# 	threads: available_cpu_count()
+	#
 	# 	shell:
 	# 		"""
-	# 		# bwa
-	# 		bwa mem genomes/viruses/viruses.v1.1.fa WB-1044497_unmapped_mate1.fq WB-1044497_unmapped_mate2.fq > WB-1044497_virus_analysis.sam
-	# 		# process bam
-	# 		samtools view -S -b WB-1044497_virus_analysis.sam > WB-1044497_virus_analysis.bam
-	# 		samtools view -h -b -F4 WB-1044497_virus_analysis.bam >  WB-1044497_virus_analysis_aligned.bam
-	# 		samtools sort WB-1044497_virus_analysis_aligned.bam > WB-1044497_virus_analysis_aligned_sort.bam
-	# 		samtools index WB-1044497_virus_analysis_aligned_sort.bam
-	# 		samtools flagstat WB-1044497_virus_analysis_aligned_sort.bam > WB-1044497_virus_analysis_aligned_sort.flg
-	# 		# count top matches
-	# 		samtools view {input.viral_analysis_bam} | cut -f 3 | sort | uniq -c | sort -nr > {output.viral_analysis_alignment_summary}
+	# 		spades.py \
+	# 		  --meta --only-assembler --threads {threads} \
+	# 		  -1 {input.r1_unmapped_reads} \
+	# 		  -2 {input.r2_unmapped_reads} \
+	# 		  -o {params.directory}
 	# 		"""
+	#
+	# rule process_denovo_assembled_contigs:
+	# 	input:
+	# 		fa = rules.denovo_assemble_offtarget_reads.output.first_pe_contigs_fasta
+	# 	output:
+	# 		hdfa = path.join(config['out'], 'spades/{sample}/high_depth_contigs.fasta')
+	# 	params:
+	# 		min_coverage=10000
+	# 	run:
+	# 		parse_contigs(input.fa, output.hdfa, params.min_coverage)
+
+
 
 def fastqc_input(w):
 	"""
