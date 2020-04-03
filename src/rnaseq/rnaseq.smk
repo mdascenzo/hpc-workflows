@@ -305,7 +305,6 @@ if opt_salmon:
 			shell(cmd)
 
 
-
 	# rule.aggrigate_tx
 	#
 	#	Description: 	Aggrigate transcript-level qunatification to gene-level.
