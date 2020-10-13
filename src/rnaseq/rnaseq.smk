@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore", category=RRuntimeWarning)
 # 	- rule.star_align: consider adding mixed RL to be run in same analysis, currently assumes the same for all samples
 # 	- rule.star_align: create subdirectory based on GTF file, link or include GTF file with index
 
-__VERSION__ = "0.1.1"
+__VERSION__ = "0.1.2"
 
 # ---------------
 # Configuration
@@ -134,6 +134,11 @@ rule all:
 			# star
 			expand(
 				path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
+				sample=SAMPLES
+			),
+			# added to detect partial analysis
+			expand(
+				path.join(config['out'], 'star/{sample}/Log.final.out'),
 				sample=SAMPLES
 			),
 			# featureCounts
@@ -285,7 +290,7 @@ if opt_salmon:
 			l = opts['salmon-quant-l']
 		log: set_log('salmon/{sample}/stdout.log')
 
-		threads: available_cpu_count()
+		threads: available_cpu_count() / 4
 
 		run:
 			output_dir = os.path.dirname(output[0])
@@ -449,7 +454,8 @@ if opt_star:
 			bam = path.join(config['out'], 'star/{sample}/Aligned.out.bam'),
 			count_file = path.join(config['out'], 'star/{sample}/ReadsPerGene.out.tab'),
 			r1_unmapped_reads = path.join(config['out'], 'star/{sample}/Unmapped.out.mate1.fq'),
-			r2_unmapped_reads = path.join(config['out'], 'star/{sample}/Unmapped.out.mate2.fq')
+			r2_unmapped_reads = path.join(config['out'], 'star/{sample}/Unmapped.out.mate2.fq'),
+			log_final = path.join(config['out'], 'star/{sample}/Log.final.out')
 		params:
 			output_dir = path.join(config['out'], 'star/{sample}'),
 			quant_mode = 'TranscriptomeSAM GeneCounts',
