@@ -487,16 +487,16 @@ if opt_star:
 			bam_dupmkd = path.join(config['out'], 'bam/{sample}_dupmkd.bam'),
 			txt_dupmkd = path.join(config['out'], 'qc/{sample}_dupmkd.txt'),
 			lib_complx = path.join(config['out'], 'qc/{sample}_lib_complx.txt')
-		threads: 4
+		threads: 12
 		shell:
 			"""
-			samtools sort -@ {threads} -o {output.bam_sorted} {input.bam}
+			samtools sort -m 2G -@ {threads} -o {output.bam_sorted} {input.bam}
 			samtools index -@ {threads} {output.bam_sorted}
-			java -jar /usr/local/sw/picard.jar MarkDuplicates \
+			java -Djava.io.tmpdir=/nfs/tmp -Xmx60G -jar /usr/local/sw/picard.jar MarkDuplicates \
 				I={output.bam_sorted} \
 				O={output.bam_dupmkd} \
 				M={output.txt_dupmkd}
-			java -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
+			java -Djava.io.tmpdir=/nfs/tmp -Xmx60G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
 				I={output.bam_sorted} \
 				O={output.lib_complx}
 			"""
