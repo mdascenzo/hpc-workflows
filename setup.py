@@ -4,7 +4,7 @@ setup(
     version="0.0.1",
     packages=find_packages(),
     scripts=['src/bin/create_config.py'],
-    install_requires=[],
+    install_requires=['natsort', 'ruamel.yaml'],
     # todo: possibly include workflows with install
     # data_files=[
     #    ('workflows/rnaseq', ['src/rnaseq/rnaseq.smk']),
