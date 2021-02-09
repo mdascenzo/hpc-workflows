@@ -38,20 +38,20 @@ if not args.fas:
 # set default analysis options
 config = collections.OrderedDict()
 config['analysis_name'] = 'rnaseq_analysis'
-config['star'] = 'no'
+config['star'] = 'yes'
 config['salmon'] = 'yes'
 config['trim'] = 'yes'
-config['resources_dir'] = '/Volumes/Precyte1/stage/resources'
+config['resources_dir'] = '/research/resources'
 config['build'] = 'hg38'
-config['genome_uid'] = 'hg38dev'
+config['genome_uid'] = 'hg38wERCC92'
 config['tx_uid'] = 'ensembl_rel83'
 config['annotation_gtf'] = 'gencode.v25.primary_assembly.annotation.wERCC92.gtf'
 # todo: update with known location
 config['tx2gene_fp'] =\
-    '/Volumes/Precyte1/stage/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
+    '/research/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
 
 # set default star options
-config['star_sj_db_overhang'] = 74
+config['star_sj_db_overhang'] = 149
 
 out = args.out
 if not os.path.isabs(args.out):
@@ -65,6 +65,8 @@ fas = [os.path.abspath(f) for f in args.fas]
 config['options'] = collections.OrderedDict()
 if args.sim:
     config['options']['salmon-quant-l'] = 'IU'
+if config['trim']:
+    config['options']['trimmomatic-adapters-fa'] = 'TruSeq3-PE-2.fa'
 
 # configure samples
 config['samples'] = collections.OrderedDict()
@@ -90,6 +92,13 @@ if not os.path.exists(config_file_name):
 else:
     print('warning: config file exists, nothing written.')
 
-# todo: consider copying workflows to local dir
-# workflow = 'rnaseq'
-# os.path.join(sys.prefix, 'envs', os.environ['CONDA_DEFAULT_ENV'], 'workflows', workflow + '.smk')
+# create an empty log directory
+log_dir = os.path.join(os.getcwd(), 'logs')
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+    #print(''.join(['creating: ' + log_dir]))
+
+# create temp directory
+tmp_dir = '/workspace/tmp'
+if not os.path.exists(tmp_dir):
+    os.makedirs(tmp_dir)
