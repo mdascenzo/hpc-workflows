@@ -203,11 +203,13 @@ rule trim_reads:
 	params:
 		adapters = opts['trimmomatic-adapters-fa'],
 
-	threads: 4
+		partition = 'compute1'
+
+	resources: ncpu=4
 	shell:
 		"""
-		java -Xms128m -Xmx16g -jar /usr/local/sw/Trimmomatic-0.39/trimmomatic-0.39.jar PE \
-			-threads {threads} \
+		java -Xms128m -Xmx7g -jar /usr/local/sw/Trimmomatic-0.39/trimmomatic-0.39.jar PE \
+			-threads {resources.ncpu} \
 			{input.read1} \
 			{input.read2} \
 			{output.read1_paired} \
@@ -245,11 +247,14 @@ if opt_salmon:
 			)
 		log: 'salmon/salmon_index.log'
 
-		threads: available_cpu_count()
+		params:
+			partition = 'compute1'
+
+		resources: ncpu=8
 
 		shell:
 			"""
-			salmon index --threads {threads} -t {input.tx_fa} -i {output} &> {log}
+			salmon index --threads {resources.ncpu} -t {input.tx_fa} -i {output} &> {log}
 			"""
 
 	def salmon_input(w):
@@ -286,18 +291,20 @@ if opt_salmon:
 			index = salmon_index_location,
 		output:
 			quant = path.join(config['out'], 'salmon/{sample}/quant.sf')
-		params:
-			l = opts['salmon-quant-l']
 		log: set_log('salmon/{sample}/stdout.log')
+		
+		params:
+			l = opts['salmon-quant-l'],
+			partition = 'compute1'
 
-		threads: available_cpu_count() / 4
+		resources: ncpu=8
 
 		run:
 			output_dir = os.path.dirname(output[0])
 			cmd =\
 			"""
 			salmon quant \
-				--threads {threads} \
+				--threads {resources.ncpu} \
 				-i {input.index} \
 				-l {params.l} \
 				-1 {input.read1} \
@@ -332,7 +339,10 @@ if opt_salmon:
 			basename = config['analysis_name'],
 			path = path.join(config['out'], 'salmon'),
 			salmon_quant_analysis_dir = path.join(config['out'], 'salmon'),
-			sample_ids = SAMPLE_IDS
+			sample_ids = SAMPLE_IDS,
+			partition = 'all'
+
+		resources: ncpu=1
 
 		run:
 			# noinspection RUnresolvedReference
@@ -389,15 +399,14 @@ if opt_star:
 				)
 			)
 		params:
-			sj_db_overhang = str(config['star_sj_db_overhang'])
+			sj_db_overhang = str(config['star_sj_db_overhang']),
+			partition = 'compute2'
 
-		threads: available_cpu_count()
-		resources:
-			mem_mb = 48000
+		resources: ncpu=8
 
 		run:
 			command =\
-			"STAR --runMode genomeGenerate --runThreadN {threads} --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
+			"STAR --runMode genomeGenerate --runThreadN {resources.ncpu} --genomeFastaFiles {input.fasta_files}/*.fa --genomeDir {output.path} --outFileNamePrefix {output.path}"
 			# add optional parameters
 			if input.annotation_gtf is not None and config['star_sj_db_overhang'] is not None:
 				command += ' --sjdbGTFfile ' + input.annotation_gtf
@@ -459,14 +468,14 @@ if opt_star:
 		params:
 			output_dir = path.join(config['out'], 'star/{sample}'),
 			quant_mode = 'TranscriptomeSAM GeneCounts',
-			out_sam_type = 'BAM Unsorted'
+			out_sam_type = 'BAM Unsorted',
+			partition = 'compute2'
 
-		threads: 8
-		resources:
-			mem_mb = 48000
+		resources: ncpu=8
+
 		shell:
 			"""
-			STAR --runThreadN {threads} \
+			STAR --runThreadN {resources.ncpu} \
 				 --genomeDir {input.star_genome_dir} \
 				 --genomeLoad LoadAndKeep \
 				 --readFilesIn <(pigz -dc {input.read1}) <(pigz -dc {input.read2}) \
@@ -487,16 +496,21 @@ if opt_star:
 			bam_dupmkd = path.join(config['out'], 'bam/{sample}_dupmkd.bam'),
 			txt_dupmkd = path.join(config['out'], 'qc/{sample}_dupmkd.txt'),
 			lib_complx = path.join(config['out'], 'qc/{sample}_lib_complx.txt')
-		threads: 12
+
+		params:
+			partition = 'highmem'
+
+		resources: ncpu=8
+
 		shell:
 			"""
-			samtools sort -m 2G -@ {threads} -o {output.bam_sorted} {input.bam}
-			samtools index -@ {threads} {output.bam_sorted}
-			java -Djava.io.tmpdir=/nfs/tmp -Xmx60G -jar /usr/local/sw/picard.jar MarkDuplicates \
+			samtools sort -m 2G -@ {resources.ncpu} -o {output.bam_sorted} {input.bam}
+			samtools index -@ {resources.ncpu} {output.bam_sorted}
+			java -Djava.io.tmpdir=/workspace/tmp -Xmx56G -jar /usr/local/sw/picard.jar MarkDuplicates \
 				I={output.bam_sorted} \
 				O={output.bam_dupmkd} \
 				M={output.txt_dupmkd}
-			java -Djava.io.tmpdir=/nfs/tmp -Xmx60G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
+			java -Djava.io.tmpdir=/workspace/tmp -Xmx56G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
 				I={output.bam_sorted} \
 				O={output.lib_complx}
 			"""
@@ -510,11 +524,16 @@ if opt_star:
 			)
 		output:
 			plot1 = path.join(config['out'], 'qc/{sample}_duprate_exp_dens_plot.jpg')
-		threads: 4
+
+		params:
+			partition = 'highmem'
+
+		resources: ncpu=8
+
 		run:
 			R("""
 			library(dupRadar)
-			dm = analyzeDuprates("{input.bam_dupmkd}", "{input.annotation_gtf}", stranded=2, paired=T, threads = {threads})
+			dm = analyzeDuprates("{input.bam_dupmkd}", "{input.annotation_gtf}", stranded=2, paired=T, threads = {resources.ncpu})
 			jpeg(filename="{output.plot1}", height=480, width=480)
 			duprateExpDensPlot(DupMat=dm)
 			dev.off()
@@ -544,13 +563,14 @@ if opt_star:
 			basename = path.join(config['out'], 'star/{sample}/feature_counts.txt'),
 			summary = path.join(config['out'], 'star/{sample}/feature_counts.txt.summary')
 		params:
-			strandedness = 2
+			strandedness = 2,
+			partition = 'compute1'
 
-		threads: 8
+		resources: ncpu=8
 
 		shell:
 			"""
-			featureCounts -T {threads} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
+			featureCounts -T {resources.ncpu} -p -B -s {params.strandedness} -a {input.annotation_gtf} -o {output.basename} {input.bam}
 			"""
 
 	# rule.merge_feature_counts
@@ -567,7 +587,10 @@ if opt_star:
 
 		params:
 			path = config['out'],
-			sample_ids = SAMPLE_IDS
+			sample_ids = SAMPLE_IDS,
+			partition = 'all'
+
+		resources: ncpu=1
 
 		run:
 			R("""
@@ -667,6 +690,12 @@ rule fastqc:
 		link_r1 = path.join(config['out'], 'fastqc/input', '{sample}_R1.fastq.gz'),
 		link_r2 = path.join(config['out'], 'fastqc/input', '{sample}_R2.fastq.gz')
 	log: set_log('fastqc/{sample}/{sample}_fastqc.log')
+
+	params:
+		partition = 'highmem'
+
+	resources: ncpu=1
+
 	shell:
 		"""
 		ln -s {input.read1} {output.link_r1}
@@ -729,9 +758,14 @@ rule multiqc:
 		) if opt_star else ()
 	output:
 		path.join(config['out'], "multiqc_report.html")
+
 	params:
-		'-m fastqc -m salmon -m star -m featureCounts --config ' + path.join(config['out'], 'multiqc_config.yaml') + ' -o ' + config['out']
+		config_path = path.join(config['out'], 'multiqc_config.yaml') + ' -o ' + config['out'],
+		partition = 'all'
+
+	resources: ncpu=1
+
 	shell:
 		"""
-		multiqc {params} {input}
+		multiqc '-m fastqc -m salmon -m star -m featureCounts --config ' {params.config_path} {input}
 		"""
