@@ -1,0 +1,122 @@
+aws]
+aws_region_name = us-west-2
+
+[aliases]
+ssh = ssh {CFN_USER}@{MASTER_IP} -i ~/.ssh/ {ARGS}
+
+[global]
+cluster_template = default
+update_check = true
+sanity_check = true
+
+[cluster default]
+key_name =
+custom_ami = ami-06b462a973d9c020a
+base_os = ubuntu1804
+master_instance_type = m5a.large
+scheduler = slurm
+vpc_settings = default
+queue_settings = all, general, compute1, compute2, highmem
+master_root_volume_size = 30
+compute_root_volume_size = 30
+ebs_settings = workspace,research
+#shared_dir = vol1
+
+[vpc default]
+vpc_id = vpc-bb45efdc
+master_subnet_id =
+compute_subnet_id =
+use_public_ips = false
+
+# scale idle instances after N minutes
+[scaling custom]
+scaledown_idletime = 10
+
+# *** queues ***
+
+[queue all]
+enable_efa = false
+enable_efa_gdr = false
+compute_resource_settings = all
+compute_type = spot
+
+[queue general]
+enable_efa = false
+enable_efa_gdr = false
+compute_resource_settings = general
+compute_type = spot
+
+[queue compute1]
+enable_efa = false
+enable_efa_gdr = false
+compute_resource_settings = compute1
+compute_type = spot
+
+[queue compute2]
+enable_efa = false
+enable_efa_gdr = false
+compute_resource_settings = compute2
+compute_type = spot
+
+[queue highmem]
+enable_efa = false
+enable_efa_gdr = false
+compute_resource_settings = highmem
+compute_type = spot
+
+# *** compute resources ***
+
+[compute_resource all]          #  default queue
+instance_type = r5a.2xlarge     #  8 cpu,  64GB (EPYC 7001) , $0.0871 per Hour
+min_count = 0
+max_count = 2
+initial_count = 0
+
+[compute_resource general]
+instance_type = m5a.4xlarge     #  16 cpu,  64GB (EPYC 7001), $0.1747 per Hour
+min_count = 0
+max_count = 2
+initial_count = 0
+
+[compute_resource compute1]
+instance_type = c5a.8xlarge     # 32 cpu,  64GB (EPYC 7002) 
+min_count = 0
+max_count = 2
+initial_count = 0
+
+[compute_resource compute2]
+instance_type = c5a.8xlarge     # 32 cpu,  64GB (EPYC 7002) 
+min_count = 0
+max_count = 2
+initial_count = 0
+
+[compute_resource highmem]
+instance_type = r5a.4xlarge     # 16 cpu, 128GB (EPYC 7001) 
+min_count = 0
+max_count = 2
+initial_count = 0
+
+# *** ebs *** 
+
+[ebs workspace]
+shared_dir = workspace
+ebs_snapshot_id = snap-00c02aedd034bbc9e
+volume_type = gp3
+volume_size = 1500
+volume_iops = 4000
+volume_throughput = 1000
+
+#volume_type = io2
+#volume_size = 1500
+#volume_iops = 15000
+
+[ebs research]
+shared_dir = research
+ebs_snapshot_id = snap-0aab922b7c67b5dd0
+volume_type = gp3
+volume_iops = 4000
+volume_throughput = 1000
+volume_size = 40
+
+#volume_type = io2
+#volume_iops = 6000
