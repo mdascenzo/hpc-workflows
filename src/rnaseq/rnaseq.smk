@@ -160,6 +160,15 @@ rule all:
 			expand(path.join(config['out'], 'qc/{sample}_dupmkd.txt'), sample=SAMPLES),
 			expand(path.join(config['out'], 'qc/{sample}_lib_complx.txt'), sample=SAMPLES),
 			expand(path.join(config['out'], 'qc/{sample}_duprate_exp_dens_plot.jpg'), sample=SAMPLES),
+			# process_star_alignments_subsample
+
+			expand(path.join(config['out'], 'subsample', 'bam/{sample}_sample.bam'), sample=SAMPLES),
+			expand(path.join(config['out'], 'subsample', 'bam/{sample}_sorted.bam'), sample=SAMPLES),
+			expand(path.join(config['out'], 'subsample', 'bam/{sample}_dupmkd.bam'), sample=SAMPLES),
+			expand(path.join(config['out'], 'subsample', 'qc/{sample}_dupmkd.txt'), sample=SAMPLES),
+			expand(path.join(config['out'], 'subsample', 'qc/{sample}_lib_complx.txt'), sample=SAMPLES),
+			#expand(path.join(config['out'], 'subsample', 'qc/{sample}_duprate_exp_dens_plot.jpg'), sample=SAMPLES),
+			
 			# feature counts
 			path.join(config['out'], "feature_counts.csv")
 
@@ -511,6 +520,35 @@ if opt_star:
 				O={output.bam_dupmkd} \
 				M={output.txt_dupmkd}
 			java -Djava.io.tmpdir=/workspace/tmp -Xmx56G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
+				I={output.bam_sorted} \
+				O={output.lib_complx}
+			"""
+
+	rule process_star_alignments_subsample:
+		input:
+			bam = rules.star_align.output.bam
+		output:
+			bam_sample = path.join(config['out'], 'subsample/bam/{sample}_sample.bam'),
+			bam_sorted = path.join(config['out'], 'subsample/bam/{sample}_sorted.bam'),
+			bam_dupmkd = path.join(config['out'], 'subsample/bam/{sample}_dupmkd.bam'),
+			txt_dupmkd = path.join(config['out'], 'subsample/qc/{sample}_dupmkd.txt'),
+			lib_complx = path.join(config['out'], 'subsample/qc/{sample}_lib_complx.txt')
+
+		params:
+			partition = 'highmem'
+
+		resources: ncpu=2
+
+		shell:
+			"""
+			samtools view -b -s 999.2 {input.bam} > {output.bam_sample}
+			samtools sort -m 2G -@ {resources.ncpu} -o {output.bam_sorted} {output.bam_sample}
+			samtools index -@ {resources.ncpu} {output.bam_sorted}
+			java -Djava.io.tmpdir=/workspace/tmp -Xmx25G -jar /usr/local/sw/picard.jar MarkDuplicates \
+				I={output.bam_sorted} \
+				O={output.bam_dupmkd} \
+				M={output.txt_dupmkd}
+			java -Djava.io.tmpdir=/workspace/tmp -Xmx25G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
 				I={output.bam_sorted} \
 				O={output.lib_complx}
 			"""
