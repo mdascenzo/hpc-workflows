@@ -167,7 +167,7 @@ rule all:
 			expand(path.join(config['out'], 'subsample', 'bam/{sample}_dupmkd.bam'), sample=SAMPLES),
 			expand(path.join(config['out'], 'subsample', 'qc/{sample}_dupmkd.txt'), sample=SAMPLES),
 			expand(path.join(config['out'], 'subsample', 'qc/{sample}_lib_complx.txt'), sample=SAMPLES),
-			#expand(path.join(config['out'], 'subsample', 'qc/{sample}_duprate_exp_dens_plot.jpg'), sample=SAMPLES),
+			expand(path.join(config['out'], 'subsample', 'qc/{sample}_duprate_exp_dens_plot.jpg'), sample=SAMPLES),
 			
 			# feature counts
 			path.join(config['out'], "feature_counts.csv")
@@ -535,7 +535,7 @@ if opt_star:
 			lib_complx = path.join(config['out'], 'subsample/qc/{sample}_lib_complx.txt')
 
 		params:
-			partition = 'highmem'
+			partition = 'compute1'
 
 		resources: ncpu=2
 
@@ -544,11 +544,11 @@ if opt_star:
 			samtools view -b -s 999.2 {input.bam} > {output.bam_sample}
 			samtools sort -m 2G -@ {resources.ncpu} -o {output.bam_sorted} {output.bam_sample}
 			samtools index -@ {resources.ncpu} {output.bam_sorted}
-			java -Djava.io.tmpdir=/workspace/tmp -Xmx25G -jar /usr/local/sw/picard.jar MarkDuplicates \
+			java -Djava.io.tmpdir=/workspace/tmp -Xmx4G -jar /usr/local/sw/picard.jar MarkDuplicates \
 				I={output.bam_sorted} \
 				O={output.bam_dupmkd} \
 				M={output.txt_dupmkd}
-			java -Djava.io.tmpdir=/workspace/tmp -Xmx25G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
+			java -Djava.io.tmpdir=/workspace/tmp -Xmx4G -jar /usr/local/sw/picard.jar EstimateLibraryComplexity \
 				I={output.bam_sorted} \
 				O={output.lib_complx}
 			"""
@@ -566,7 +566,31 @@ if opt_star:
 		params:
 			partition = 'highmem'
 
-		resources: ncpu=8
+		resources: ncpu=2
+
+		run:
+			R("""
+			library(dupRadar)
+			dm = analyzeDuprates("{input.bam_dupmkd}", "{input.annotation_gtf}", stranded=2, paired=T, threads = {resources.ncpu})
+			jpeg(filename="{output.plot1}", height=480, width=480)
+			duprateExpDensPlot(DupMat=dm)
+			dev.off()
+			""")
+
+	# runs well with ncpu=2
+	rule qc_duplicates_subsample:
+		input:
+			bam_dupmkd = rules.process_star_alignments_subsample.output.bam_dupmkd,
+			annotation_gtf = path.join(
+				config['resources_dir'], 'genomes', config['build'], config['genome_uid'], 'annotation', config['annotation_gtf']
+			)
+		output:
+			plot1 = path.join(config['out'], 'subsample/qc/{sample}_duprate_exp_dens_plot.jpg')
+
+		params:
+			partition = 'highmem'
+
+		resources: ncpu=2
 
 		run:
 			R("""
