@@ -767,5 +767,5 @@ rule multiqc:
 
 	shell:
 		"""
-		multiqc '-m fastqc -m salmon -m star -m featureCounts --config ' {params.config_path} {input}
+		multiqc -m fastqc -m salmon -m star -m featureCounts --config {params.config_path} {input}
 		"""
