@@ -9,6 +9,7 @@ This is a development branch. Optimizations to workflow resources (memory, cpus,
 # Notes for use on AWS:
 
 ## Prerequisites:
+On a local machine:
 - Python 3.0 
 - AWS ParallelCluster installed on a local machine (see: [Installing AWS ParallelCluster](https://docs.aws.amazon.com/parallelcluster/latest/ug/install.html))
 - 
