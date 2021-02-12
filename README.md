@@ -41,16 +41,6 @@ aws s3 cp --recursive s3:// /workspace
 ```
 Resource files (STAR index files, annotation, etc) are auto mounted in /research and do not need to be copied to the cluster. 
 
-### Install workflow setup script
-
-Workflow setup scripts are not currently installed by default on the cluster, install on the head node:
-```
-git clone https://github.com/ 
-git checkout dev-hpc
-cd workflows
-sudo pip install .
-```
-
 #### Run RNA-Seq Workflow
 ```
 # create and cd to analysis/working directory
@@ -59,7 +49,7 @@ cd $analysis_dir
 mkdir seq
 mv *.fastq.gz ./seq
 
-Workflow setup scripts are not currently installed by default on the cluster, install now:
+# workflow setup scripts are not currently installed by default on the cluster, install now:
 git clone https://github.com/ 
 git checkout dev-hpc
 cd workflows
