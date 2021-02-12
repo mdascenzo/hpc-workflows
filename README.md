@@ -14,7 +14,7 @@ This is a development branch. Optimizations to workflow resources (memory, cpus,
 - 
 
 ## Quickstart
-After installing prerequisites, copy the pcluster configuration to your home directory.
+After installing prerequisites, copy the pcluster configuration to your home directory:
 ```
 git clone https://github.com/
 git checkout dev-hpc
@@ -39,22 +39,35 @@ NFS mounts are auto created:
 ```
 aws s3 cp --recursive s3:// /workspace
 ```
-Resoruce files (STAR index files, annotation, etc) are auto mounted in /research and do not need to be copied to the cluster. 
+Resource files (STAR index files, annotation, etc) are auto mounted in /research and do not need to be copied to the cluster. 
+
+### Install workflow setup script
+
+Workflow setup scripts are not currently installed by default on the cluster, install on the head node:
+```
+git clone https://github.com/ 
+git checkout dev-hpc
+cd workflows
+sudo pip install .
+```
 
 #### Run RNA-Seq Workflow
 ```
-# create and change analysis/working directory
+# create and cd to analysis/working directory
 analysis_dir='/workspace/30-410354445'
-cd analysis_dir
+cd $analysis_dir
 mkdir seq
 mv *.fastq.gz ./seq
 
-# clone workflow from GitHub:
+Workflow setup scripts are not currently installed by default on the cluster, install now:
 git clone https://github.com/ 
 git checkout dev-hpc
+cd workflows
+sudo pip install .
 
 # link contents of the rnaseq working directory to the current analysis/working dir
 # contents include the rnaseq.smk workflow and required R scripts
+cd $analysis_dir
 ln -s workflows/src/rnaseq/* .
 
 # create analysis configuration file
