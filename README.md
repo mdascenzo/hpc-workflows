@@ -74,18 +74,18 @@ analysis_name: rnaseq_analysis
 star: yes
 salmon: yes
 trim: yes
-resources_dir: /nfs/research/resources
+resources_dir: /research/resources
 build: hg38
 genome_uid: hg38wERCC92
 tx_uid: ensembl_rel83
 annotation_gtf: gencode.v25.primary_assembly.annotation.wERCC92.gtf
-tx2gene_fp: /nfs/research/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv
+tx2gene_fp: /research/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv
 star_sj_db_overhang: 149
-out: /nfs/30-410354445/analysis
+out: /workspace/30-410354445/analysis
 options:
   trimmomatic-adapters-fa: TruSeq3-PE-2.fa
 samples:
   01-08-14-20_R1_001:
-    read1: /nfs/30-410354445/seq/01-08-14-20_R1_001.fastq.gz
-    read2: /nfs/30-410354445/seq/01-08-14-20_R2_001.fastq.gz
+    read1: /workspace/30-410354445/seq/01-08-14-20_R1_001.fastq.gz
+    read2: /workspace/30-410354445/seq/01-08-14-20_R2_001.fastq.gz
 ```
