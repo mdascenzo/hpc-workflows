@@ -25,7 +25,7 @@ cp workflows/aws/parallelcluster/configure ~/.parallelcluster
 ```
 pcluster create rnaseq
 ```
-This step takes about 5-10 minutes as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster avoiding idle Compute nodes. 
+This step takes about 5-10 minutes as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster, avoiding idle Compute nodes. 
 
 #### Connect to the head node
 ```
