@@ -2,7 +2,7 @@
 
 RNA-Seq workflow optimized for use with [AWS Parallel Cluster](https://aws.amazon.com/hpc/parallelcluster/) and [Slurm workload manager](https://slurm.schedmd.com/documentation.html).
 
-This branch adds functionality that integrates RNA-Seq workflow with AWS Parallel Cluster and Slurm workload manager. Use of Slurm allows greater control over compute resources and creates coherent log files. The AWS Parallel Cluster configuration included in this branch utilizes spot instances offering a significant cost reduction compared to on-demand instanses. Additionally, compute nodes are autoscaled to meet analysis workload and are terminated when not in use for 10 minutes. This branch includes [Packer](https://www.packer.io) build scripts for automating the build of a custom AMI containing the required RNA-Seq analysis dependencies/tools alongside AWS Parallel cluster and Slurm resources. Docker is no longer used in this branch but may be re-implemented in future versions.
+This branch adds functionality that integrates RNA-Seq workflow with AWS Parallel Cluster and Slurm workload manager. Use of Slurm allows greater control over compute resources and creates coherent log files. The AWS Parallel Cluster configuration included in this branch utilizes spot instances offering a significant cost reduction compared to on-demand instanses. Additionally, compute nodes are autoscaled to meet analysis workload and are terminated when not in use for 10 minutes. This branch includes [Packer](https://www.packer.io) build scripts for automating the build of a custom AMI containing the required RNA-Seq analysis dependencies/tools alongside AWS Parallel Cluster and Slurm resources. Docker is no longer implemented in this branch but may be re-implemented in future versions.
 
 This is a development branch. Optimizations to workflow resources (memory, cpus, parallel tasks per node, etc.) will likely be made as this workflow is applied to new data.
 
@@ -18,14 +18,14 @@ After installing prerequisites, copy the pcluster configuration to your home dir
 ```
 git clone https://github.com/
 git checkout dev-hpc
-cp workflows/aws/parallelcluster/configure ~/.parallelcluster
+cp workflows/aws/parallelcluster/config ~/.parallelcluster
 ```
 
 #### Create a new cluster
 ```
 pcluster create rnaseq
 ```
-This step takes about 5-10 minutes as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster, avoiding idle Compute nodes. 
+This command takes about 5-10 minutes to complete as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster, avoiding idle Compute nodes. 
 
 #### Connect to the head node
 ```
