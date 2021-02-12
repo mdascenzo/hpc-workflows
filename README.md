@@ -1,111 +1,57 @@
+# Introduction
+
+RNA-Seq workflow optimized for use with [AWS Parallel Cluster](https://aws.amazon.com/hpc/parallelcluster/) and [Slurm workload manager](https://slurm.schedmd.com/documentation.html).
+
+This branch adds functionality that integrates RNA-Seq workflow with AWS Parallel Cluster and Slurm workload manager. Use of Slurm allows greater control over compute resources and creates coherent log files. The AWS Parallel Cluster configuration included in this branch utilizes spot instances offering a significant cost reduction compared to on-demand instanses. Additionally, compute nodes are autoscaled to meet analysis workload and are terminated when not in use for 10 minutes. This branch includes [Packer](https://www.packer.io) build scripts for automating the build of a custom AMI containing the required RNA-Seq analysis dependencies/tools alongside AWS Parallel cluster and Slurm resources. Docker is no longer used in this branch but may be re-implemented in future versions.
+
+This is a development branch. Optimizations to workflow resources (memory, cpus, parallel tasks per node, etc.) will likely be made as this workflow is applied to new data.
 
 # Notes for use on AWS:
 
-## Instance:
+## Prerequisites:
+- Python 3.0 
+- AWS ParallelCluster installed on a local machine (see: [Installing AWS ParallelCluster](https://docs.aws.amazon.com/parallelcluster/latest/ug/install.html))
+- 
 
-Tested on r5a instance type based on AMD EPYC 7000. [[link]](https://aws.amazon.com/ec2/instance-types/r5/) 
-
-* Minimum required resources: 16 vCPU / 128 Gb RAM | **r5a.4xlarge**
-* For larger analyses, consider: 48 vCPU / 384 Gb RAM | **r5a.12xlarge**
-
-A template has been created and configured to run instances using a spot request. This has pros/cons, on the upside pricing is favorable (e.g r5ad.12xlarge @ $0.85 spot vs. $3.14 on-demand), however availability can sometimes be limited, which can result in termination of the instance mid-analysis. While termination is less than ideal, the analysis is backed by a persistent EBS volume, allowing the analysis to be resumed after re-launching a new instance.
-
-* Template [[link]](https://us-west-2.console.aws.amazon.com/ec2/v2/home?region=us-west-2#LaunchTemplateDetails:launchTemplateId=lt-09c3433e9b361f599)
-
-## Storage:
-
-EBS attached storage is used for analysis resource (e.g. STAR index and annotation), FASTQ input files, and analysis output. 
-* Size: As a general guideline, 1500 GB should be adequate for 25 samples.
-* Recommended storage type: Throughput Optimized (St1)
-
-
-#### Attach volume:
-Newly created volume must be manually attached and mounted:
+## Quickstart
+After installing prerequisites, copy the pcluster configuration to your home directory.
 ```
-# check storage name
-lsblk
-
-# format
-sudo mkfs -t xfs /dev/nvme1n1
-
-# create mount point
-sudo mkdir /nfs
-
-# using nvme1n1 based on lsblk, however this is dynamic
-sudo mount -t xfs /dev/nvme1n1 /nfs
+git clone https://github.com/
+git checkout dev-hpc
+cp workflows/aws/parallelcluster/configure ~/.parallelcluster
 ```
 
-## AWS Credentials
-
-#### Add credentials
+#### Create a new cluster
 ```
-aws configure
-
-AWS Access Key ID [None]: AKIAIOSFODNN7EXAMPLE
-AWS Secret Access Key [None]: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY 
-Default region name [None]: us-west-2 
-Default output format [None]: json
+pcluster create rnaseq
 ```
+This step takes about 5-10 minutes as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster avoiding idle Compute nodes. 
 
-### Monitor cost of spot instance
-
+#### Connect to the head node
 ```
-#start:
-aws ec2 create-spot-datafeed-subscription --bucket --prefix spot/
-
-#stop:
-aws ec2 delete-spot-datafeed-subscription
+pcluster ssh rnaseq
 ```
+NFS mounts are auto created:
+- /workspace
+- /research
 
-## Docker
-
-Docker is already setup and configured in the launched AMI. It should contain the most recent rnaseq Docker image. If a newer version is available, it can be pulled from Amazon Elastic Container Registry (ECR) using the following steps, otherwise, skep to step 4 to launch the existing docker image installed in the launched AMI. 
-
-#### Pull Docker Image:
+#### Copy data from S3 to cluster
 ```
-docker pull.amazonaws.com/rnaseq:0.1.7
+aws s3 cp --recursive s3:// /workspace
 ```
+Resoruce files (STAR index files, annotation, etc) are auto mounted in /research and do not need to be copied to the cluster. 
 
-#### Create Docker Container:
-
-This will create as a daemon which will allow the container to continue running even after existing the shell. 
-
-```
-docker run -dt -v /nfs:/nfs -v /home/admin/.aws:/root/.aws --name rnaseq.amazonaws.com/rnaseq:0.1.7
-```
-
-To check that the container is running. 
-```
-docker ps
-```
-
-To connect to the container, this may take a bit (~30s) to connect:
-```
-docker exec -it rnaseq /bin/bash 
-```
-
-## S3 / Data
-
-Sequence files must be manually copied from S3. For example:
-
-```
-aws s3 cp --recursive s3:// .
-```
-!! Note: Resources files must also be copied over from S3 (STAR index files, annotation, etc).
-
-## RNA-Seq Workflow
-
-All commands executed to run the RNA-Seq workflow should be run from within the launched rnaseq Docker container. 
-
-From within docker container:
+#### Run RNA-Seq Workflow
 ```
 # create and change analysis/working directory
-mkdir analysis_dir
+analysis_dir='/workspace/30-410354445'
 cd analysis_dir
+mkdir seq
+mv *.fastq.gz ./seq
 
 # clone workflow from GitHub:
 git clone https://github.com/ 
-git checkout remotes/origin/dev-docker
+git checkout dev-hpc
 
 # link contents of the rnaseq working directory to the current analysis/working dir
 # contents include the rnaseq.smk workflow and required R scripts
@@ -115,8 +61,8 @@ ln -s workflows/src/rnaseq/* .
 # the default configuration needs to be updated, a working example is below.
 create_config.py -f seq/*.gz
 
-# run the analysis 
-nohup snakemake -s rnaseq.smk &> out.log &
+# run the analysis using Slurm profile
+nohup snakemake -s rnaseq.smk --profile slurm &> out.log &
 
 # to gracefully stop workflow:
 killall -TERM snakemake
