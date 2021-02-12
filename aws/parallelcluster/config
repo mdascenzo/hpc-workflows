@@ -101,7 +101,7 @@ initial_count = 0
 
 [ebs workspace]
 shared_dir = workspace
-ebs_snapshot_id = snap-00c02aedd034bbc9e
+#ebs_snapshot_id = 
 volume_type = io2
 volume_size = 1500
 volume_iops = 5000
