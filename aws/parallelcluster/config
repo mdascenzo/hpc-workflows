@@ -6,8 +6,8 @@ ssh = ssh {CFN_USER}@{MASTER_IP} -i ~/.ssh/ {ARGS}
 
 [global]
 cluster_template = default
-update_check = true
-sanity_check = true
+update_check = false
+sanity_check = false
 
 [cluster default]
 key_name =
@@ -17,8 +17,8 @@ master_instance_type = m5a.large
 scheduler = slurm
 vpc_settings = default
 queue_settings = all, general, compute1, compute2, highmem
-master_root_volume_size = 30
-compute_root_volume_size = 30
+master_root_volume_size = 35
+compute_root_volume_size = 35
 ebs_settings = workspace,research
 #fsx_settings = fs
 #shared_dir = vol1
@@ -98,19 +98,14 @@ max_count = 2
 initial_count = 0
 
 # *** ebs *** 
-
 [ebs workspace]
 shared_dir = workspace
-#ebs_snapshot_id = 
-volume_type = io2
-volume_size = 1500
-volume_iops = 5000
+volume_type = st1
+volume_size = 2000
 
 [ebs research]
 shared_dir = research
-ebs_snapshot_id = snap-0aab922b7c67b5dd0
 volume_type = gp2
-volume_iops = 300
 volume_size = 40
 
 #[fsx fs]
