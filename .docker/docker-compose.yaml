@@ -1,0 +1,15 @@
+version: "3.7"
+services:
+  env:
+    build: env
+    volumes:
+    - type: bind
+      source: ~/.aws
+      target: /root/.aws
+      bind:
+        create_host_path: false
+    - type: bind
+      source: ~/.ssh
+      target: /root/.ssh
+      bind:
+        create_host_path: false
