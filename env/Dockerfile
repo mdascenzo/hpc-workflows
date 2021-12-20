@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y \
     zip \
     python3 \
     python3-pip \
-    git
+    git \
+    vim
 
 # install AWS parallelcluster, add path to root
 RUN pip3 install "aws-parallelcluster==2.10.1" --upgrade --user
