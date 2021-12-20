@@ -2,51 +2,81 @@
 
 RNA-Seq workflow optimized for use with [AWS Parallel Cluster](https://aws.amazon.com/hpc/parallelcluster/) and [Slurm workload manager](https://slurm.schedmd.com/documentation.html).
 
-This branch adds functionality that integrates RNA-Seq workflow with AWS Parallel Cluster and Slurm workload manager. Use of Slurm allows greater control over compute resources and creates coherent log files. The AWS Parallel Cluster configuration included in this branch utilizes spot instances offering a significant cost reduction compared to on-demand instanses. Additionally, compute nodes are autoscaled to meet analysis workload and are terminated when not in use for 10 minutes. This branch includes [Packer](https://www.packer.io) build scripts for automating the build of a custom AMI containing the required RNA-Seq analysis dependencies/tools alongside AWS Parallel Cluster and Slurm resources. Docker is no longer implemented in this branch but may be re-implemented in future versions.
+This branch adds functionality that integrates RNA-Seq workflow with AWS Parallel Cluster and Slurm workload manager. Use of Slurm allows greater control over compute resources and creates coherent log files. The AWS Parallel Cluster configuration included in this branch utilizes spot instances offering a significant cost reduction compared to on-demand instanses. Additionally, compute nodes are autoscaled to meet analysis workload and are terminated when not in use for 10 minutes. This branch includes [Packer](https://www.packer.io) build scripts for automating the build of a custom AMI containing the required RNA-Seq analysis dependencies/tools alongside AWS Parallel Cluster and Slurm resources. 
+
+Docker is implemented to provide an environement for launching and managing the HPC cluster. 
 
 This is a development branch. Optimizations to workflow resources (memory, cpus, parallel tasks per node, etc.) will likely be made as this workflow is applied to new data.
 
-# Notes for use on AWS:
+### Prerequisites:
 
-## Prerequisites:
-On a local machine:
-- Python 3.0 
-- AWS ParallelCluster (see: [Installing AWS ParallelCluster](https://docs.aws.amazon.com/parallelcluster/latest/ug/install.html))
-- 
+The following files must be in place and configured prior to proceeding to subsequent steps.
 
-## Quickstart
-After installing prerequisites, copy the pcluster configuration to your home directory:
+Setting | Location | Path
+--- | --- | ---
+AWS config | local |  ~/.aws/config
+AWS credentials | local |  ~/.aws/credentials
+ssh config | local | ~/.ssh/config
+ssh credentials | local |  ~/.ssh/
+
+These files are are mounted within 
+
+##Cluster Setup
+
+### Local Docker Environment
+Docker is used to maintain the required environment for manage thecluster. Create a Docker container using the following image:
 ```
-git clone https://github.com/
-git checkout dev-hpc
-cp workflows/aws/parallelcluster/config ~/.parallelcluster
+docker pull X
+docker run --entrypoint /bin/bash
 ```
 
-#### Create a new cluster
+TODO: copy to docker container
+git clone https://github.com/ 
+git checkout dev-hpc                                          
+cp workflows/aws/parallelcluster/config ~/.parallelcluster 
+
+#### Create cluster
+From within the docker container:
 ```
-pcluster create rnaseq
+pcluster create
 ```
 This command takes about 5-10 minutes to complete as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster, avoiding idle Compute nodes. 
 
-#### Connect to the head node
-```
-pcluster ssh rnaseq
-```
-NFS mounts are auto created:
-- /workspace
-- /research
+#### Configure SSH timeout
+To avoid timeouts when connection to the head node via SSH, update your SSH config (located at ~/.ssh/config) to contain the following setting:
 
-#### Copy data from S3 to cluster
+`ServerAliveInterval 120`
+
+#### ADD SSH credentials to head node
+Copy credentials to head node for use with aws command line tools (awscli).
 ```
-aws s3 cp --recursive s3:// /workspace
+HEAD_NODE_IP_ADDRESS=`aws ec2 describe-instances --query "Reservations[*].Instances[*].PublicIpAddress" --filter Name=tag:Name,Values=Master --output text`
+scp -r -i ~/.ssh/ ~/.aws ubuntu@${HEAD_NODE_IP_ADDRESS}:.aws
 ```
-Resource files (STAR index files, annotation, etc) are auto mounted in /research and do not need to be copied to the cluster. 
+
+### Copy data
+Copy sequence data and analysis resource files using awscli.
+```
+# List the contents of the s3 shared folder:
+aws s3 ls s3://
+
+# Use the desired folder name to set the value of ANALYSIS_ID, for example:
+ANALYSIS_ID=30-410354445
+
+# Sync the folder set by ANALYSIS_ID in the previous command to EC2 workspace
+aws s3 sync s3:// /workspace/${ANALYSIS_ID}
+```
+
+Copy resource files (STAR index files, annotation, etc) to /research:
+```
+aws s3 sync s3:// /research/resources
+```
 
 #### Run RNA-Seq Workflow
 ```
 # create and cd to analysis/working directory
-analysis_dir='/workspace/30-410354445'
-cd $analysis_dir
+ANALYSIS_DIR='/workspace/${ANALYSIS_ID}'
+cd $ANALYSIS_DIR
 mkdir seq
 mv *.fastq.gz ./seq
 
@@ -58,7 +88,7 @@ sudo pip install .
 
 # link contents of the rnaseq working directory to the current analysis/working dir
 # contents include the rnaseq.smk workflow and required R scripts
-cd $analysis_dir
+cd $ANALYSIS_DIR
 ln -s workflows/src/rnaseq/* .
 
 # create analysis configuration file
