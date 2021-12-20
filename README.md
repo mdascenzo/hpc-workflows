@@ -19,12 +19,79 @@ AWS credentials | local |  ~/.aws/credentials
 ssh config | local | ~/.ssh/config
 ssh credentials | local |  ~/.ssh/
 
-These files are are mounted within 
+These files are are mounted within the Docker container.
+
+More info files HERE:
+
+### AWS Setup
+##### .aws config setup
+AWS config should contain (~/.aws/config):
+```
+[default]
+region = us-west-2
+output = json
+```
+
+##### .aws credentials setup (~/.aws/credentials)
+```
+[default]
+aws_access_key_id = AKIARGXPHLFIQCXXXXXX
+aws_secret_access_key = u2p16+VicWwhqFRyaTbeZO5SVbOgBOtDscXXXXXX
+```
+
+
+
+#### SSH Setup
+##### .ssh directory setup
+On local machine (e.g. iMac, Aloha):
+```
+# create .ssh directory, if it does not exist
+mkdir ~/.ssh
+chmod 700 ~/.ssh
+
+# copy to local .ssh directory
+cp /Volumes/Precyte1/research/aws/ssh/ ~/.ssh
+```
+
+##### .ssh config setup
+To avoid timeouts when connecting to the head node via SSH, update your SSH config (located at ~/.ssh/config) to contain the following setting:
+
+ServerAliveInterval 120
+
+For example:
+```
+echo "ServerAliveInterval 120" >> ~/.ssh/config 
+```
+
+### Local Docker Setup
+
+For the following steps, ensure that docker-compose is V2 or gerater.
+```
+# clone repository
+git clone https://github.com/
+
+# - or - 
+
+git clone git@github.com:
+
+# checkout dev-hpc branch
+cd workflows
+git checkout dev-hpc
+
+# build and start docker container using
+docker-compose
+docker-compose -f .docker/docker-compose.yaml up
+
+# connect to terminal
+docker exec -it docker_env_1 /bin/bash
+```
 
 ##Cluster Setup
 
 ### Local Docker Environment
-Docker is used to maintain the required environment for manage thecluster. Create a Docker container using the following image:
+Docker is used to maintain the required environment for managing thecluster. Create a Docker container using the following image:
+
+TODO: explore starting container via Docker Compose.
 ```
 docker pull X
 docker run --entrypoint /bin/bash
@@ -34,6 +101,13 @@ TODO: copy to docker container
 git clone https://github.com/ 
 git checkout dev-hpc                                          
 cp workflows/aws/parallelcluster/config ~/.parallelcluster 
+
+Layers:
+
+1. Docker Container: managing cluster via AWS Parallel Cluster, pcluster (eg. start, stopping, deleting, etc.)
+2. AWS AMI: HPC Cluster layer 
+
+
 
 #### Create cluster
 From within the docker container:
