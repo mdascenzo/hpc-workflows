@@ -226,19 +226,33 @@ samples:
     read2: /workspace/30-410354445/seq/01-08-14-20_R2_001.fastq.gz
 ```
 
-### Slurm
+## Slurm Commands
 
-Useful slurm commands:
-```
-sinfo
-squeue
-```
-Log into compute node:
+### Useful slurm commands:
+
+#### sinfo
+
+#### squeue
+
+See: [multiple-queue-mode-slurm-user-guide](https://docs.aws.amazon.com/parallelcluster/latest/ug/multiple-queue-mode-slurm-user-guide.html)
+
+### Other:
+Log into compute node from head node.
 ```
 ssh compute1-dy-c5a8xlarge-1
 ```
 
-Notes:
+## Troubleshooting
+
+#### Jobs submitted to cluster but compute nodes do not start.
+Spot instances may not be available, confirm using [cloudfront_dashbord:slurm_resume](https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#dashboards:name=parallelcluster-
+
+Verify the following error:
+ERROR - Encountered exception when launching instances for nodes (x2) ['compute1-dy-c5a8xlarge-1', 'compute1-dy-c5a8xlarge-2']: 
+An error occurred (InsufficientInstanceCapacity) when calling the RunInstances operation (reached max retries: 1): There is no Spot capacity available that matches your request.
+
+
+## Notes
 ```
 sudo systemctl stop unattended-upgrades
 sudo apt-get purge unattended-upgrades
