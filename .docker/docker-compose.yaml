@@ -2,6 +2,8 @@ version: "3.7"
 services:
   env:
     build: env
+    image:.amazonaws.com/pcluster_admin
+    container_name: pcluster_admin
     volumes:
     - type: bind
       source: ~/.aws
@@ -11,5 +13,15 @@ services:
     - type: bind
       source: ~/.ssh
       target: /root/.ssh
+      bind:
+        create_host_path: false
+    - type: bind
+      source: ~/.parallelcluster 
+      target: /root/.parallelcluster 
+      bind:
+        create_host_path: false
+    - type: bind
+      source: ../../workflows 
+      target: /code/workflows 
       bind:
         create_host_path: false
