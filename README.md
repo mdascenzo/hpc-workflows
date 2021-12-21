@@ -8,124 +8,159 @@ Docker is implemented to provide an environement for launching and managing the 
 
 This is a development branch. Optimizations to workflow resources (memory, cpus, parallel tasks per node, etc.) will likely be made as this workflow is applied to new data.
 
-### Prerequisites:
+## Initial Setup
 
-The following files must be in place and configured prior to proceeding to subsequent steps.
+In the following steps a Docker environement will be created to facilate creation and management of an HPC cluster used to process analysis workflows. AWS and ssh credentials must be setup to allow communication between a local machine (e.g. Aloha or iMac) and AWS.
 
-Setting | Location | Path
---- | --- | ---
-AWS config | local |  ~/.aws/config
-AWS credentials | local |  ~/.aws/credentials
-ssh config | local | ~/.ssh/config
-ssh credentials | local |  ~/.ssh/
+### AWS User Permissions
 
-These files are are mounted within the Docker container.
+Users should first be assigned to the **IAM User** group `PrecyteClusterUsers` within the AWS Control Panel.
 
-More info files HERE:
-
-### AWS Setup
-##### .aws config setup
-AWS config should contain (~/.aws/config):
+### Repository
+Clone the workflow repository to a local machine.
 ```
-[default]
-region = us-west-2
-output = json
-```
-
-##### .aws credentials setup (~/.aws/credentials)
-```
-[default]
-aws_access_key_id = AKIARGXPHLFIQCXXXXXX
-aws_secret_access_key = u2p16+VicWwhqFRyaTbeZO5SVbOgBOtDscXXXXXX
-```
-
-
-
-#### SSH Setup
-##### .ssh directory setup
-On local machine (e.g. iMac, Aloha):
-```
-# create .ssh directory, if it does not exist
-mkdir ~/.ssh
-chmod 700 ~/.ssh
-
-# copy to local .ssh directory
-cp /Volumes/Precyte1/research/aws/ssh/ ~/.ssh
-```
-
-##### .ssh config setup
-To avoid timeouts when connecting to the head node via SSH, update your SSH config (located at ~/.ssh/config) to contain the following setting:
-
-ServerAliveInterval 120
-
-For example:
-```
-echo "ServerAliveInterval 120" >> ~/.ssh/config 
-```
-
-### Local Docker Setup
-
-For the following steps, ensure that docker-compose is V2 or gerater.
-```
-# clone repository
 git clone https://github.com/
 
 # - or - 
 
 git clone git@github.com:
 
-# checkout dev-hpc branch
-cd workflows
+# checkout the hpc branch:
 git checkout dev-hpc
-
-# build and start docker container using
-docker-compose
-docker-compose -f .docker/docker-compose.yaml up
-
-# connect to terminal
-docker exec -it docker_env_1 /bin/bash
 ```
 
-##Cluster Setup
+### Configuration files
+The following configuration files are required before proceeding. The files should be created on a **local machine** within your home directory, later the parent directoreis (.aws, .parallelcluster, and .ssh) will be mounted inside a Docker container launched in subsequent steps.
 
-### Local Docker Environment
-Docker is used to maintain the required environment for managing thecluster. Create a Docker container using the following image:
+Setting | Location | Path
+--- | --- | ---
+AWS config | local |  ~/.aws/config
+AWS credentials | local |  ~/.aws/credentials
+AWS parallel cluster config | local | ~/.parallelcluster/config 
+ssh config | local | ~/.ssh/config
+ssh credentials | local |  ~/.ssh/
 
-TODO: explore starting container via Docker Compose.
+### AWS Setup
+On local machine (e.g. iMac, Aloha):
+
+#### AWS config setup (~/.aws/config):
+
 ```
-docker pull X
-docker run --entrypoint /bin/bash
+[default]
+region = us-west-2
+output = json
 ```
 
-TODO: copy to docker container
-git clone https://github.com/ 
-git checkout dev-hpc                                          
-cp workflows/aws/parallelcluster/config ~/.parallelcluster 
-
-Layers:
-
-1. Docker Container: managing cluster via AWS Parallel Cluster, pcluster (eg. start, stopping, deleting, etc.)
-2. AWS AMI: HPC Cluster layer 
-
-
-
-#### Create cluster
-From within the docker container:
+#### AWS credentials setup (~/.aws/credentials):
 ```
-pcluster create
+[default]
+aws_access_key_id = AKIARGXPHLFIQCXXXXXX
+aws_secret_access_key = u2p16+VicWwhqFRyaTbeZO5SVbOgBOtDscXXXXXX
 ```
-This command takes about 5-10 minutes to complete as it provisions a Master node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default Compute nodes are not launched, but will launch once the workflow is started. This allows data to be copied from S3 to the cluster, avoiding idle Compute nodes. 
 
-#### Configure SSH timeout
-To avoid timeouts when connection to the head node via SSH, update your SSH config (located at ~/.ssh/config) to contain the following setting:
+#### AWS Parallel Cluster setup (~/.parallelcluster/config):
+```
+mkdir ~/.parallelcluster
+
+# from within workflows directory
+cp aws/parallelcluster/config ~/.parallelcluster 
+```
+
+### SSH Setup
+
+On local machine (e.g. iMac, Aloha):
+
+#### .ssh directory setup
+
+```
+# create .ssh directory if needed and set permissions
+mkdir ~/.ssh
+chmod 700 ~/.ssh
+
+# copy to local .ssh directory and set permissions
+cp /Volumes/Precyte1/research/aws/ssh/ ~/.ssh
+chmod 400 ~/.ssh/
+```
+
+#### SSH config setup (~/.ssh/config):
+To avoid timeouts when connecting to the head node via SSH, update your SSH config to contain the following setting:
 
 `ServerAliveInterval 120`
 
-#### ADD SSH credentials to head node
-Copy credentials to head node for use with aws command line tools (awscli).
+The following command will add this setting and create the config file if it is not already present.
+```
+echo "ServerAliveInterval 120" >> ~/.ssh/config 
+```
+
+### Local Docker Setup
+
+Docker is used to maintain the required environment for managing thecluster Before proceeding, check that the following are installed on your local machine. For Docker on OSX, Docker Compose V2 must be enabled within the Docker control panel.
+
+#### Requirements:
+- Docker
+- Docker Compose (version v2.2.1 or greater) 
+
+Verify Docker Compose version with: `docker-compose --version`
+
+## Launch Cluster
+
+To do: add a description of the multiple layers utilized to access AWS.
+
+The layers are:
+
+1. Launch environment: A Docker container containing software required to manage cluster via AWS Parallel Cluster using pcluster. Provies utility to start, stop, delete cluster and acts as a gateway to connect to the cluster head node.
+2. HPC cluster 
+
+### Create launch environment:
+
+```
+# from within the workflow repository
+cd workflows
+
+# build and start docker container
+docker-compose -f .docker/docker-compose.yaml up
+
+# in a new terminal, connect to the container
+docker exec -it pcluster_admin /bin/bash
+```
+
+### Create cluster
+From within the launch environment (docker container):
+```
+pcluster create
+```
+This command takes about 5-10 minutes to complete as it provisions a Head node, Compute nodes, and EBS backed NFS resources for sharing data between nodes. By default, Compute nodes are not launched, but will launch once the workflow is started allowing data to be copied from S3 to the cluster while avoiding idle Compute nodes. 
+
+#### Copy AWS credentials and workflows to head node:
+Once the cluster has started, copy the following to the head node:
+ 1. AWS credentials, for use with AWS command line tools (awscli)
+ 2. /code/workflows
+
+The path `/code/workflows` should have been auto-mounted for quick access within the launch environment. 
+
 ```
 HEAD_NODE_IP_ADDRESS=`aws ec2 describe-instances --query "Reservations[*].Instances[*].PublicIpAddress" --filter Name=tag:Name,Values=Master --output text`
+
+# copy .aws directory to head node
 scp -r -i ~/.ssh/ ~/.aws ubuntu@${HEAD_NODE_IP_ADDRESS}:.aws
+
+# copy workflow repository to head node, exclude hidden files
+rsync -a --progress  -e "ssh -i ~/.ssh/ --exclude='.*'  /code/workflows ubuntu@${HEAD_NODE_IP_ADDRESS}:/workspace
+```
+
+### SSH to head node
+Login to the head node from the launch environment using:
+```
+pcluster ssh
+```
+
+### Install workflows
+Analysis workflow setup scripts were copied to the cluster in a previous step. These are not currently installed by default on the cluster, install now:
+```
+cd /workspace/workflows
+sudo pip install .
+pip install --user .
+export PATH=$PATH:/home/ubuntu/.local/bin
 ```
 
 ### Copy data
@@ -149,25 +184,18 @@ aws s3 sync s3:// /research/resources
 #### Run RNA-Seq Workflow
 ```
 # create and cd to analysis/working directory
-ANALYSIS_DIR='/workspace/${ANALYSIS_ID}'
+ANALYSIS_DIR=/workspace/${ANALYSIS_ID}
 cd $ANALYSIS_DIR
-mkdir seq
-mv *.fastq.gz ./seq
-
-# workflow setup scripts are not currently installed by default on the cluster, install now:
-git clone https://github.com/ 
-git checkout dev-hpc
-cd workflows
-sudo pip install .
+mv 00_fastq seq
 
 # link contents of the rnaseq working directory to the current analysis/working dir
 # contents include the rnaseq.smk workflow and required R scripts
 cd $ANALYSIS_DIR
-ln -s workflows/src/rnaseq/* .
+ln -s /workspace/workflows/src/rnaseq/* .
 
 # create analysis configuration file
 # the default configuration needs to be updated, a working example is below.
-create_config.py -f seq/*.gz
+create_config.py -f seq/*.gz -o analysis
 
 # run the analysis using Slurm profile
 nohup snakemake -s rnaseq.smk --profile slurm &> out.log &
@@ -196,4 +224,22 @@ samples:
   01-08-14-20_R1_001:
     read1: /workspace/30-410354445/seq/01-08-14-20_R1_001.fastq.gz
     read2: /workspace/30-410354445/seq/01-08-14-20_R2_001.fastq.gz
+```
+
+### Slurm
+
+Useful slurm commands:
+```
+sinfo
+squeue
+```
+Log into compute node:
+```
+ssh compute1-dy-c5a8xlarge-1
+```
+
+Notes:
+```
+sudo systemctl stop unattended-upgrades
+sudo apt-get purge unattended-upgrades
 ```
