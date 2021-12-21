@@ -75,7 +75,7 @@ config['samples'] = collections.OrderedDict()
 it = iter(natsort.natsorted(fas))
 for x in it:
     paired_reads = (x, next(it))
-    sample_id = re.sub('_1$', '', os.path.splitext(os.path.splitext(os.path.basename(paired_reads[0]))[0])[0])
+    sample_id = re.sub('_R1_001$', '', os.path.splitext(os.path.splitext(os.path.basename(paired_reads[0]))[0])[0])
 
     config['samples'][sample_id] = collections.OrderedDict()
     config['samples'][sample_id]['read1'] = paired_reads[0]
