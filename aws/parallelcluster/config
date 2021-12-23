@@ -39,31 +39,31 @@ scaledown_idletime = 10
 enable_efa = false
 enable_efa_gdr = false
 compute_resource_settings = all
-compute_type = spot
+compute_type = ondemand
 
 [queue general]
 enable_efa = false
 enable_efa_gdr = false
 compute_resource_settings = general
-compute_type = spot
+compute_type = ondemand
 
 [queue compute1]
 enable_efa = false
 enable_efa_gdr = false
 compute_resource_settings = compute1
-compute_type = spot
+compute_type = ondemand
 
 [queue compute2]
 enable_efa = false
 enable_efa_gdr = false
 compute_resource_settings = compute2
-compute_type = spot
+compute_type = ondemand
 
 [queue highmem]
 enable_efa = false
 enable_efa_gdr = false
 compute_resource_settings = highmem
-compute_type = spot
+compute_type = ondemand
 
 # *** compute resources ***
 
@@ -98,15 +98,12 @@ max_count = 2
 initial_count = 0
 
 # *** ebs *** 
+# 12500 GB achieves max throughput of 500 MiB/s
 [ebs workspace]
-shared_dir = workspace
-volume_type = st1
-volume_size = 2000
-
-[ebs research]
 shared_dir = research
-volume_type = gp2
-volume_size = 40
+volume_type = st1
+volume_size = 12500
+
 
 #[fsx fs]
 #shared_dir = /fsx
