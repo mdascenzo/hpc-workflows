@@ -147,7 +147,7 @@ scp -r -i ~/.ssh/ ~/.aws ubuntu@${HEAD_NODE_IP_ADDRESS}:.aws
 # copy workflow repository to head node, exclude hidden files
 rsync -a --progress  -e "ssh -i ~/.ssh/ --exclude='.*'  /code/workflows ubuntu@${HEAD_NODE_IP_ADDRESS}:/workspace
 ```
-
+## Setup and Run Analysis
 ### SSH to head node
 Login to the head node from the launch environment using:
 ```
@@ -164,7 +164,7 @@ export PATH=$PATH:/home/ubuntu/.local/bin
 ```
 
 ### Copy data
-Copy sequence data and analysis resource files using awscli.
+#### Copy sequence data and analysis resource files using awscli.
 ```
 # List the contents of the s3 shared folder:
 aws s3 ls s3://
@@ -176,12 +176,12 @@ ANALYSIS_ID=30-410354445
 aws s3 sync s3:// /workspace/${ANALYSIS_ID}
 ```
 
-Copy resource files (STAR index files, annotation, etc) to /research:
+#### Copy resource files (STAR index files, annotation, etc) to /research:
 ```
 aws s3 sync s3:// /research/resources
 ```
 
-#### Run RNA-Seq Workflow
+### Run RNA-Seq Workflow
 ```
 # create and cd to analysis/working directory
 ANALYSIS_DIR=/workspace/${ANALYSIS_ID}
@@ -198,13 +198,90 @@ ln -s /workspace/workflows/src/rnaseq/* .
 create_config.py -f seq/*.gz -o analysis
 
 # run the analysis using Slurm profile
-nohup snakemake -s rnaseq.smk --profile slurm &> out.log &
-
-# to gracefully stop workflow:
-killall -TERM snakemake
+nohup snakemake --keep-going -s rnaseq.smk --profile slurm &> out.log &
 ```
 
-#### Example config.yml header:
+### Monitor analysis progress
+```
+grep done$ /workspace/30-601341635/out.log | tail -n 1
+```
+
+
+### Copy completed analysis data to S3
+```
+# sync to
+aws s3 sync ${ANALYSIS_DIR} s3:// \
+  --exclude 'bam/*' \
+  --exclude 'seq/*' \
+  --exclude '*trim_reads/*' \
+  --exclude "*.snakemake/*" --exclude "*/.git/*" \
+  --exclude "*.bam*" --exclude "*.fq" --exclude "*.fastq" --exclude "*.fastq.gz" --exclude "*.fq.gz" 
+  ```
+
+---
+
+## Useful Commands
+
+### snakemake:
+
+#### killall 
+Gracefully stop workflow. All queued jobs will run to completion.
+```
+killall -TERM snakemake
+```
+---
+
+### slurm commands:
+
+#### sinfo
+Display available compute resources including CPU load:
+```
+sinfo -o "%20P %.5a %.10l %.6D %.6t %40N  %5c %20C %20O "
+```
+
+#### squeue
+Display queue information with added width showing full job name:
+```
+squeue -o "%.18i %.9P %.50j %.8u %.2t %.10M %.6D %R"
+```
+
+See: [multiple-queue-mode-slurm-user-guide](https://docs.aws.amazon.com/parallelcluster/latest/ug/multiple-queue-mode-slurm-user-guide.html)
+
+#### scontrol
+Show additional job details:
+```
+scontrol show jobid -dd <job-id>
+```
+--- 
+
+## Other Commands
+
+Check analysis progress:
+```
+ grep done$ /workspace/30-601341635/out.log | tail -n 1
+```
+
+## Admin Commands
+
+Log into compute node from head node.
+```
+ssh compute1-dy-c5a8xlarge-1
+```
+
+Cancel all jobs
+```
+squeue --me -h -o "%i" | xargs scancel
+```
+
+## Change cluster status
+For example, change from spot to ondemand. Update config file in ~/.parallelcluster/config, then:
+```
+pcluster update
+```
+
+
+
+## Example config.yml header:
 ```yml
 analysis_name: rnaseq_analysis
 star: yes
@@ -226,21 +303,6 @@ samples:
     read2: /workspace/30-410354445/seq/01-08-14-20_R2_001.fastq.gz
 ```
 
-## Slurm Commands
-
-### Useful slurm commands:
-
-#### sinfo
-
-#### squeue
-
-See: [multiple-queue-mode-slurm-user-guide](https://docs.aws.amazon.com/parallelcluster/latest/ug/multiple-queue-mode-slurm-user-guide.html)
-
-### Other:
-Log into compute node from head node.
-```
-ssh compute1-dy-c5a8xlarge-1
-```
 
 ## Troubleshooting
 
@@ -256,4 +318,18 @@ An error occurred (InsufficientInstanceCapacity) when calling the RunInstances o
 ```
 sudo systemctl stop unattended-upgrades
 sudo apt-get purge unattended-upgrades
+```
+
+#### Transfer speed
+```
+# from head node
+dd if=/dev/zero of=/workspace/tmp.img bs=1G count=1 oflag=direct
+1+0 records in
+1+0 records out
+1073741824 bytes (1.1 GB, 1.0 GiB) copied, 45.0649 s, 23.8 MB/s
+```
+
+From compute node
+```
+1073741824 bytes (1.1 GB, 1.0 GiB) copied, 37.9573 s, 28.3 MB/s
 ```
