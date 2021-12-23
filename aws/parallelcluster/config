@@ -100,11 +100,12 @@ initial_count = 0
 # *** ebs *** 
 # 12500 GB achieves max throughput of 500 MiB/s
 [ebs workspace]
-shared_dir = research
+shared_dir = workspace
 volume_type = st1
 volume_size = 12500
 
-
-#[fsx fs]
-#shared_dir = /fsx
-#storage_capacity = 1200
+[ebs research]
+shared_dir = research
+volume_type = gp3
+volume_size = 100
+volume_throughput = 1000
