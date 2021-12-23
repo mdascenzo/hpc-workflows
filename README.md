@@ -182,6 +182,7 @@ aws s3 sync s3:// /research/resources
 ```
 
 ### Run RNA-Seq Workflow
+### Run RNA-Seq Workflow
 ```
 # create and cd to analysis/working directory
 ANALYSIS_DIR=/workspace/${ANALYSIS_ID}
@@ -229,6 +230,7 @@ Gracefully stop workflow. All queued jobs will run to completion.
 ```
 killall -TERM snakemake
 ```
+---
 ---
 
 ### slurm commands:
