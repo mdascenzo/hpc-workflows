@@ -5,8 +5,8 @@
     "ami_base_name": "ami-rnaseq",
     "ec2_user": "ubuntu",
     "instance_type": "c5a.large",
-    "root_volume_size_Gi": "30",
-    "source_ami": "ami-01a7264e2e3bf272f"
+    "root_volume_size_Gi": "35",
+    "source_ami": "ami-0b85023a113f4059a"
   },
   "builders": [
     {
@@ -41,13 +41,13 @@
  "provisioners": [
   {
     "type": "file",
-    "source": "profile.d/",
+    "source": "profile.d",
     "destination": "/tmp/profile.d"
   },
   {
     "type": "shell",
     "inline": [
-      "sudo cp -r /tmp/profile.d/* /etc/profile.d"
+      "sudo cp -r /tmp/profile.d /etc/profile.d"
     ]
   },
   {
