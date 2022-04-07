@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     vim
 
 # install AWS parallelcluster, add path to root
-RUN pip3 install "aws-parallelcluster==2.10.1" --upgrade --user
+RUN pip3 install "aws-parallelcluster==2.11.5" --upgrade --user
 ENV PATH "$PATH:/root/.local/bin"
 
 # install aws commandline v2
