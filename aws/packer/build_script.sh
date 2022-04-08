@@ -49,7 +49,7 @@ conda install -y pandas conda
 
 # R and required packages
 conda install -y -c r r-base=3.6.1 r-tidyverse=1.2.1 r-hmisc=4.2_0 r-kernsmooth
-conda install -y -c conda-forge r-rlist=0.4.6.1
+conda install -y -c conda-forge r-rlist=0.4.6.1 r-locfit
 R -e "install.packages('BiocManager', repos = 'https://cloud.r-project.org', quiet=FALSE, verbose=TRUE)"
 R -e "BiocManager::install(c('DESeq2', 'tximport', 'dupRadar'))"
 conda install -y rpy2
