@@ -41,14 +41,14 @@ config['analysis_name'] = 'rnaseq_analysis'
 config['star'] = 'yes'
 config['salmon'] = 'yes'
 config['trim'] = 'yes'
-config['resources_dir'] = '/research/resources'
+config['resources_dir'] = '/workspace/research/resources'
 config['build'] = 'hg38'
 config['genome_uid'] = 'hg38wERCC92'
 config['tx_uid'] = 'ensembl_rel83'
 config['annotation_gtf'] = 'gencode.v25.primary_assembly.annotation.wERCC92.gtf'
 # todo: update with known location
 config['tx2gene_fp'] =\
-    '/research/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
+    '/workspace/research/resources/transcriptomes/hg38/ensembl_rel86/annotation/tx2gene/tx2gene.EnsDb.Hsapiens.v86.csv'
 
 # set default star options
 config['star_sj_db_overhang'] = 149
