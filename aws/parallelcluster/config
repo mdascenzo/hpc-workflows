@@ -11,7 +11,7 @@ sanity_check = true
 
 [cluster default]
 key_name =
-custom_ami = ami-03619c97024194ddb
+custom_ami = ami-0ccba043a3cba74d9
 base_os = ubuntu1804
 master_instance_type = m5a.large
 scheduler = slurm
