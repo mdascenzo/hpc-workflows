@@ -335,3 +335,23 @@ From compute node
 ```
 1073741824 bytes (1.1 GB, 1.0 GiB) copied, 37.9573 s, 28.3 MB/s
 ```
+
+### Create new AMI
+
+AMI build code is in aws/packer and can be built using packer. Packer can be run within a linux container to complete the build.
+
+Install Packer
+```
+apt install wget
+wget https://releases.hashicorp.com/packer/1.8.5/packer_1.8.5_linux_amd64.zip
+unzip packer*
+mkdir /opt/packer
+mv packer /opt/packer/
+ln -s /opt/packer/packer /usr/local/bin/packer
+```
+
+Build AMI - from within Docker env:
+```
+cd /code/workflows/aws/packer
+packer build ami-rnaseq-hpc.json
+```

@@ -1,0 +1,115 @@
+Region: us-west-2
+Image:
+  Os: ubuntu2004
+  CustomAmi: ami-097222b92654d7850
+HeadNode:
+  InstanceType: m5a.large
+  Networking:
+    SubnetId:
+    ElasticIp: true
+  DisableSimultaneousMultithreading: false
+  Ssh:
+    KeyName:
+    AllowedIps: <cidr>
+
+## queues required:
+# all         r5a.2xlarge     #  8 cpu,  64GB (EPYC 7001) , $0.0871 per Hour
+# compute1    c5a.8xlarge     # 32 cpu,  64GB (EPYC 7002) 
+# compute2    c5a.8xlarge     # 32 cpu,  64GB (EPYC 7002) 
+# highmem     r5a.4xlarge     # 16 cpu, 128GB (EPYC 7001) 
+
+Scheduling:  
+  Scheduler: slurm
+  SlurmSettings:
+    ScaledownIdletime: 10
+    Dns:
+      DisableManagedDns: true
+  
+  SlurmQueues:
+    - Name: all
+      CapacityType: ONDEMAND
+      Networking:
+        SubnetIds:
+          -
+        AssignPublicIp: false
+        PlacementGroup:
+          Enabled: true
+          #Id: pg-03961743d988c6ecf
+          Name:
+      ComputeResources:
+        - Name: compute-resource1
+          InstanceType: r5a.2xlarge
+          MinCount: 0
+          MaxCount: 2
+          DisableSimultaneousMultithreading: false
+
+    - Name: compute1
+      CapacityType: ONDEMAND
+      Networking:
+        SubnetIds:
+          -
+        AssignPublicIp: false
+        PlacementGroup:
+          Enabled: true
+          #Id: pg-03961743d988c6ecf
+          Name:
+      ComputeResources:
+        - Name: compute-resource1
+          InstanceType: c5a.8xlarge
+          MinCount: 1
+          MaxCount: 4
+          DisableSimultaneousMultithreading: false
+
+    - Name: compute2
+      CapacityType: ONDEMAND
+      Networking:
+        SubnetIds:
+          -
+        AssignPublicIp: false
+        PlacementGroup:
+          Enabled: true
+          #Id: pg-03961743d988c6ecf
+          Name:
+      ComputeResources:
+        - Name: compute-resource1
+          InstanceType: c5a.8xlarge
+          MinCount: 0
+          MaxCount: 2
+          DisableSimultaneousMultithreading: false
+
+    - Name: highmem
+      CapacityType: ONDEMAND
+      Networking:
+        SubnetIds:
+          -
+        AssignPublicIp: false
+        PlacementGroup:
+          Enabled: true
+          #Id: pg-03961743d988c6ecf
+          Name:
+      ComputeResources:
+        - Name: compute-resource1
+          InstanceType: r5a.4xlarge
+          MinCount: 0
+          MaxCount: 4
+          DisableSimultaneousMultithreading: false
+
+SharedStorage:
+  - MountDir: /workspace
+    Name: workspace
+    StorageType: Ebs
+    EbsSettings:
+      VolumeType: st1  # gp2 | gp3 | io1 | io2 | sc1 | st1 | standard
+      Size: 12500
+      DeletionPolicy: Retain
+
+Monitoring:
+  DetailedMonitoring: true
+  Logs:
+    CloudWatch:
+      Enabled: true
+      RetentionInDays: 30
+      DeletionPolicy: Retain
+  Dashboards:
+    CloudWatch:
+      Enabled: true

@@ -1,18 +1,18 @@
 {
   "variables": {
-    "ami_version": "1.0.0",
+    "ami_version": "3.4.0",
     "ami_user": "
     "ami_base_name": "ami-rnaseq",
     "ec2_user": "ubuntu",
     "instance_type": "c5a.large",
     "root_volume_size_Gi": "35",
-    "source_ami": "ami-0b85023a113f4059a"
+    "source_ami": "ami-003a1c9b1596d8f0c"
   },
   "builders": [
     {
       "type": "amazon-ebs",
       "ami_name": "{{user `ami_base_name`}}-{{timestamp}}",
-      "ami_description": "AMI supportsRNA-Seq analysis pipeline, with AWS Parallel Cluster",
+      "ami_description": "AMI supportsRNA-Seq analysis pipeline, with AWS Parallel Cluster v3.4",
       "region": "us-west-2",
       "instance_type": "{{user `instance_type`}}",
       "ami_users": [
@@ -31,7 +31,7 @@
       "source_ami": "{{user `source_ami`}}",
       "tags": {
         "OS_Version": "Ubuntu",
-        "Release": "18.04",
+        "Release": "20.04",
         "Base_AMI_Name": "{{ .SourceAMIName }}",
         "Extra": "{{ .SourceAMITags.TagName }}"
       },

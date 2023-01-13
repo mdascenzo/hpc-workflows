@@ -15,11 +15,11 @@ services:
       target: /root/.ssh
       bind:
         create_host_path: false
-    - type: bind
-      source: ~/.parallelcluster 
-      target: /root/.parallelcluster 
-      bind:
-        create_host_path: false
+ #   - type: bind
+ #     source: ~/.parallelcluster 
+ #     target: /root/.parallelcluster 
+ #     bind:
+ #       create_host_path: false
     - type: bind
       source: ../../workflows 
       target: /code/workflows 

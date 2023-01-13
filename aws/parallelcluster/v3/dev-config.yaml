@@ -1,0 +1,22 @@
+Region: us-west-2
+Image:
+  Os: ubuntu2004
+HeadNode:
+  InstanceType: t2.micro
+  Networking:
+    SubnetId:
+  Ssh:
+    KeyName:
+Scheduling:
+  Scheduler: slurm
+  SlurmQueues:
+  - Name: compute1
+    ComputeResources:
+    - Name: t2micro
+      Instances:
+      - InstanceType: t2.micro
+      MinCount: 0
+      MaxCount: 2
+    Networking:
+      SubnetIds:
+      -
