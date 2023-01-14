@@ -31,7 +31,7 @@ apt-get install -y default-jdk
 mkdir /usr/local/sw
 mkdir /tmp/build
 cd /tmp/build
-wget https://repo.continuum.io/miniconda/Miniconda3-4.7.12.1-Linux-x86_64.sh -O miniconda.sh
+wget https://repo.anaconda.com/miniconda/Miniconda3-py37_22.11.1-1-Linux-x86_64.sh -O miniconda.sh
 sh miniconda.sh -b -p /usr/local/env/conda
 
 # export paths for this build
