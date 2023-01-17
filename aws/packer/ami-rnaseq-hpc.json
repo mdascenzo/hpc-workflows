@@ -6,7 +6,7 @@
     "ec2_user": "ubuntu",
     "instance_type": "c5a.large",
     "root_volume_size_Gi": "35",
-    "source_ami": "ami-003a1c9b1596d8f0c"
+    "source_ami": "<ami-id>"
   },
   "builders": [
     {
