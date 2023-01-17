@@ -11,28 +11,25 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 # remove upgrades that autorun daily
-apt remove unattended-upgrades
+apt remove -y unattended-upgrades
 # turn off motd
 chmod -x /etc/update-motd.d/*
 
-# add system monitoring tools
-apt-get install sysstat
-
-# build tools, python, and R
+# build tools, python, and R, sysstat
 apt-get install -y \
     build-essential cmake git swig libz-dev libbz2-dev vim \
-    tree htop wget zip rsync pigz rename \
-    graphviz libgraphviz-dev pkg-config
+    tree htop wget zip rsync pigz rename sysstat \
+    graphviz libgraphviz-dev pkg-config 
 
-# # java
+# java
 apt-get install -y default-jdk
 
 # python (conda)
 mkdir /usr/local/sw
 mkdir /tmp/build
 cd /tmp/build
-wget https://repo.anaconda.com/miniconda/Miniconda3-py37_22.11.1-1-Linux-aarch64.sh -O miniconda.sh
-sh miniconda.sh -b -p /usr/local/env/conda
+wget https://repo.anaconda.com/miniconda/Miniconda3-py38_22.11.1-1-Linux-x86_64.sh -O miniconda.sh
+bash miniconda.sh -b -p /usr/local/env/conda
 
 # export paths for this build
 export PATH="/usr/local/env/conda/bin:${PATH}"
@@ -42,7 +39,7 @@ conda init
 conda install -y anaconda-client
 
 # general packages
-conda install -y -c anaconda graphviz=2.40.1
+conda install -y -c anaconda graphviz=2.50.0
 
 # python packages
 conda install -y pandas conda
