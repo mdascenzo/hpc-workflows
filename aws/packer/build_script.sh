@@ -25,6 +25,7 @@ apt-get install -y \
 apt-get install -y default-jdk
 
 # python (conda)
+# see: https://docs.conda.io/en/latest/miniconda.html
 mkdir /usr/local/sw
 mkdir /tmp/build
 cd /tmp/build
