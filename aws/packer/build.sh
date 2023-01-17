@@ -1,1 +1,1 @@
-packer build ami-rnaseq.hpc &> build.log.tmp &
+packer build ami-rnaseq.hpc &> logs/build.log.tmp &
