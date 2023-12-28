@@ -1,7 +1,7 @@
 {
     "variables": {
       "ami_version": "1.0.0",
-      "ami_user": "
+      "ami_user": "",
       "ami_base_name": "ami-rnaseq",
       "ec2_user": "ubuntu",
       "instance_type": "c5a.large",
