@@ -4,9 +4,10 @@ Image:
 HeadNode:
   InstanceType: t2.micro
   Networking:
-    SubnetId:
+    SubnetId: <<subnet-id>
   Ssh:
-    KeyName:
+    KeyName: <ssh-key-name>
+    AllowedIps: <cidr-block>
 Scheduling:
   Scheduler: slurm
   SlurmQueues:
@@ -19,4 +20,4 @@ Scheduling:
       MaxCount: 2
     Networking:
       SubnetIds:
-      -
+      - <<subnet-id>

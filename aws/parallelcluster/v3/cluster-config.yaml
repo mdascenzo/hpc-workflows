@@ -5,12 +5,12 @@ Image:
 HeadNode:
   InstanceType: m5a.large
   Networking:
-    SubnetId:
+    SubnetId: <<subnet-id>
     ElasticIp: true
   DisableSimultaneousMultithreading: false
   Ssh:
-    KeyName:
-    AllowedIps: <cidr>
+    KeyName: <ssh-key-name>
+    AllowedIps: <cidr-block>
 
 ## queues required:
 # all         r5a.2xlarge     #  8 cpu,  64GB (EPYC 7001) , $0.0871 per Hour
@@ -30,12 +30,11 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          -
+          - <<subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
-          #Id: pg-03961743d988c6ecf
-          Name:
+          Name: <placement-group-name>
       ComputeResources:
         - Name: compute-resource1
           InstanceType: r5a.2xlarge
@@ -47,12 +46,11 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          -
+          - <<subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
-          #Id: pg-03961743d988c6ecf
-          Name:
+          Name: <placement-group-name>
       ComputeResources:
         - Name: compute-resource1
           InstanceType: c5a.8xlarge
@@ -64,12 +62,11 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          -
+          - <<subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
-          #Id: pg-03961743d988c6ecf
-          Name:
+          Name: <placement-group-name>
       ComputeResources:
         - Name: compute-resource1
           InstanceType: c5a.8xlarge
@@ -81,12 +78,11 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          -
+          - <<subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
-          #Id: pg-03961743d988c6ecf
-          Name:
+          Name: <placement-group-name>
       ComputeResources:
         - Name: compute-resource1
           InstanceType: r5a.4xlarge
