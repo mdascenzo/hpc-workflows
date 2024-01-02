@@ -5,7 +5,7 @@ Image:
 HeadNode:
   InstanceType: m5a.large
   Networking:
-    SubnetId: <<subnet-id>
+    SubnetId: <subnet-id>
     ElasticIp: true
   DisableSimultaneousMultithreading: false
   Ssh:
@@ -30,7 +30,7 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          - <<subnet-id>
+          - <subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
@@ -46,7 +46,7 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          - <<subnet-id>
+          - <subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
@@ -62,7 +62,7 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          - <<subnet-id>
+          - <subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true
@@ -78,7 +78,7 @@ Scheduling:
       CapacityType: ONDEMAND
       Networking:
         SubnetIds:
-          - <<subnet-id>
+          - <subnet-id>
         AssignPublicIp: false
         PlacementGroup:
           Enabled: true

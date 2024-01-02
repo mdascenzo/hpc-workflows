@@ -4,7 +4,7 @@ Image:
 HeadNode:
   InstanceType: t2.micro
   Networking:
-    SubnetId: <<subnet-id>
+    SubnetId: <subnet-id>
   Ssh:
     KeyName: <ssh-key-name>
     AllowedIps: <cidr-block>
@@ -20,4 +20,4 @@ Scheduling:
       MaxCount: 2
     Networking:
       SubnetIds:
-      - <<subnet-id>
+      - <subnet-id>

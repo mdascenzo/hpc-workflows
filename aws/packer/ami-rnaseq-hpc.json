@@ -12,7 +12,7 @@
     {
       "type": "amazon-ebs",
       "ami_name": "{{user `ami_base_name`}}-{{timestamp}}",
-      "ami_description": "AMI supportsRNA-Seq analysis pipeline, with AWS Parallel Cluster v3.4",
+      "ami_description": "RNA-Seq analysis pipeline with AWS Parallel Cluster v3.4",
       "region": "us-west-2",
       "instance_type": "{{user `instance_type`}}",
       "ami_users": [

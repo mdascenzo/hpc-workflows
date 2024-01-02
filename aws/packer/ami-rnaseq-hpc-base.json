@@ -11,7 +11,7 @@
       {
         "type": "amazon-ebs",
         "ami_name": "{{user `ami_base_name`}}-{{timestamp}}",
-        "ami_description": "AMI supportsRNA-Seq analysis pipeline (base)",
+        "ami_description": "RNA-Seq analysis pipeline (base)",
         "region": "us-west-2",
         "instance_type": "{{user `instance_type`}}",
         "ami_users": [
