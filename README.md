@@ -208,4 +208,4 @@ Interactive Session:
 
 ## History
 
-The code in this repository was independently developed by me at [PreCyte, Inc.](https://www.precyte.net/), primarily to support our internal research and development efforts. It will continue to be actively maintained and updated here. Recent updates include an upgrade to ParallelCluster (v3.8), released in December 2023, a limited integration with the recently released AWS ParallelCluster UI, and the addition of a login node pool to enhance the cluster configuration.
+I developed the code in this repository while working at [PreCyte, Inc.](https://www.precyte.net/) to support our internal research and development efforts. It will continue to be actively maintained and updated here. Recent updates include an upgrade to ParallelCluster (v3.8), released in December 2023, a limited integration with the recently released AWS ParallelCluster UI, and the addition of a login node pool to enhance the cluster configuration.
