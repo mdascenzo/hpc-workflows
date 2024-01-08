@@ -1,7 +1,28 @@
 Region: us-west-2
 Image:
   Os: ubuntu2004
-  CustomAmi: ami-097222b92654d7850
+  CustomAmi: <ami-id>
+LoginNodes:
+  Pools:
+    - Name: login-nodes-pool
+      Count: 1
+      InstanceType: t3.nano
+      GracetimePeriod: 30
+      Image:
+        CustomAmi: <ami-id>
+      Ssh:
+        KeyName: <ssh-key-name>
+      Networking:
+        SubnetIds:
+          - <subnet-id>
+        #SecurityGroups:
+        #  - string
+        #AdditionalSecurityGroups:
+        #  - string
+      Iam:
+        AdditionalIamPolicies:
+          - Policy: arn:aws:iam::123456789012:policy/S3Access
+
 HeadNode:
   InstanceType: m5a.large
   Networking:
@@ -91,7 +112,7 @@ Scheduling:
           DisableSimultaneousMultithreading: false
 
 SharedStorage:
-  - MountDir: /workspace
+  - MountDir: /nfs
     Name: workspace
     StorageType: Ebs
     EbsSettings:
