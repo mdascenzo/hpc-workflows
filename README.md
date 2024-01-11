@@ -57,8 +57,6 @@ For example, the additional software specified in the build script `aws/packer/a
 **1. Define User Variables:**
 Within the Docker Build Environment (`pcluster_admin`), it's important to first customize the `packer-variables.json` file. This file is crucial, as it contains key configuration variables that Packer utilizes during the build process. It specifically includes details such as the AWS user who will have access to the AMI and the AWS region in which it will be available. You can find this file at the following location within the Build Environment: `/code/hpc-workflows/aws/packer`.
 
-It assumed that user `~/.ssh` and `~/.aws` are already configured with appropriate credentials.
-
 ```
 {
     "ami_users": ["123456789012"],
@@ -67,8 +65,13 @@ It assumed that user `~/.ssh` and `~/.aws` are already configured with appropria
 }
 
 ```
+**2. Check AWS permissions**:
+
+Check that the `~/.aws` and `~/.ssh` directories, which are required by the build, contain AWS `credentials` and `.pem` files on the Docker host. For MacOS and Linux users, these directories are automatically mounted within the `pcluster_admin` container for convenience. For other operating systems, the appropriate credentials will need to be configured manually within the `pcluster_admin` container. Additionally, the top-level `docker-compose.yaml` file will require modification to remove these two volumes.
+
 **3. Run Build:**
-Execute Packer using the build.sh script. This will provision an AWS instance and build a custom AMI for use with AWS Parallel Cluster.  
+Execute Packer using the build.sh script. This will provision an AWS instance and build a custom AMI for use with AWS Parallel Cluster.
+
 ```
 build.sh
 ```
