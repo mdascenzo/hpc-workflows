@@ -102,7 +102,6 @@ To launch a cluster, a Virtual Private Cloud (VPC) is required. This can be gene
 ```
 pcluster configure --config tmp-config-file.yaml
 ```
-Executing this command will initiate a guided process to configure the VPC appropriately for your specific use case. It also generates the associated Subnet IDs in the `tmp-config-file.yaml`  which can be added manually to the `cluster-config.yaml` file. Create public and private Subnets during the configuration process allows greater flexibility when applying settings to the cluster-config.  
 
 Executing this command initiates a guided process to configure the VPC appropriately for your specific use case. It also generates the associated Subnet IDs, which are listed in the `tmp-config-file.yaml`. These IDs can then be manually added to the `cluster-config.yaml` file. Creating both public and private Subnets during this configuration process allows for greater flexibility when applying settings in the `cluster-config.yaml`.
 
