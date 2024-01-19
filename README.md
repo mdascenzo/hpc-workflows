@@ -1,3 +1,5 @@
+[![RNA-Seq Installer](https://github.com/mdascenzo/hpc-workflows/actions/workflows/rnaseq-installer.yaml/badge.svg)](https://github.com/mdascenzo/hpc-workflows/actions/workflows/rnaseq-installer.yaml)
+
 This repository contains utilities and documentation designed to serve as a starting point for setting up a High-Performance Computing (HPC) environment using [AWS ParallelCluster](https://aws.amazon.com/hpc/parallelcluster/), in conjunction with the  [Slurm](https://slurm.schedmd.com/documentation.html) workload manager. It guides users through a straightforward command-line process, detailing the creation of a customized cluster environment and a custom Amazon Machine Image (AMI), adaptable to various specific use cases. Packer streamlines the creation and configuration of custom AMIs via the command line. This approach is particularly suitable for continuous integration (CI) workflows.
 
 The custom AMI created by the Packer templates is automatically published to the specified AWS user account. Additionally, these images are tagged to become available in the recently added [AWS ParallelCluster UI](https://docs.aws.amazon.com/parallelcluster/latest/ug/pcui-using-v3.html) upon the completion of the build.
@@ -125,7 +127,7 @@ The default configuration creates the following resources.
 
 ##### Compute Resources:
 
-| Node  | Slurm Queue | Initial | Max | Instance Type |  vCPU  | Mem (GB)) | Subnet* |
+| Node  | Slurm Queue | Initial | Max | Instance Type |  vCPU  | Mem (GB) | Subnet* |
 |---|---|---|---|---|---|---|---|
 | Login Node | - | 1 | 1  | t3.nano | 2 | 0.5 | public |
 | Head Node  | -  | 1 | 1 |  m5a.large |  2 | 8 | private |

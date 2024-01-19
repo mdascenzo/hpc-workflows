@@ -10,5 +10,5 @@ export PACKER_LOG_PATH="logs/packer-detailed-$BUILD_TIMESTAMP.log"
 # create logs directory if it doesn't exist
 [ ! -d "logs" ] && mkdir -p "logs"
 
-# build the AMI
-packer build -var "build_timestamp=$BUILD_TIMESTAMP" -var-file=build-variables.json ami-rnaseq.json
+# build the rnaseq AMI
+packer build -var "build_timestamp=$BUILD_TIMESTAMP" -var-file=build-variables.json builds/rnaseq/packer.json

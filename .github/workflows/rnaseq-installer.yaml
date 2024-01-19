@@ -1,0 +1,47 @@
+name: RNA-Seq Installer
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'tests/Dockerfile'
+      - 'aws/ami/builds/rnaseq/install.sh'
+      - 'tests/rnaseq/**'
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - 'tests/Dockerfile'
+      - 'aws/ami/builds/rnaseq/install.sh'
+      - 'tests/rnaseq/**'
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-20.04
+    env:
+      ID: rnaseq
+    steps:
+    - uses: actions/checkout@v3
+
+    # - name: Succeed
+    #   run: exit 0 
+
+    - name: Docker Build and Test
+      id: docker_build
+      run: |
+        docker build -t ${ID}-build-test --build-arg ID=${ID} -f tests/Dockerfile .
+        docker run --name ${ID}-container ${ID}-build-test
+        exit_code=$(docker inspect ${ID}-container --format='{{.State.ExitCode}}')
+        echo "Exit code: $exit_code"
+        exit $exit_code
+
+    - name: Stop Container
+      run: docker stop ${ID}-container
+
+    - name: Remove Container
+      run: docker rm ${ID}-container
+
+    - name: Remove Image
+      run: docker rmi ${ID}-build-test

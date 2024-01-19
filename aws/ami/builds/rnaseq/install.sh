@@ -8,7 +8,7 @@ export DEBIAN_FRONTEND=noninteractive
 # set path for user
 #sudo echo "PATH=\"/usr/local/env/conda/bin:${PATH}\"" > /etc/environment
 ##
-
+#exit 0
 apt-get update
 # remove upgrades that autorun daily
 apt-get remove -y unattended-upgrades
@@ -47,7 +47,7 @@ conda install -y -c conda-forge mamba
 #conda install -y -c anaconda pandas #graphviz
 
 # python packages
-mamba install -y pandas=2.1.4
+mamba install -y pandas=2.1.4 cython=3.0.7
 
 # R and required packages
 mamba install -y -c conda-forge r-base=4.3.2 r-tidyverse=2.0.0 r-hmisc=5.1_1 r-kernsmooth=2.23_22 r-rlist=0.4.6.2 r-locfit=1.5_9.8
